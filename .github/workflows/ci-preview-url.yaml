@@ -1,0 +1,157 @@
+---
+  # This workflow monitors AWS Amplify deployments for pull requests targeting the 'dev' branch.
+  # It checks if the PR branch exists in Amplify, monitors the deployment job status,
+  # and posts comments on the PR with the deployment status and preview URL when available.
+  #
+  # Workflow steps:
+  # 1. Authenticates with AWS using OIDC
+  # 2. Checks if the PR branch exists in AWS Amplify
+  # 3. Monitors the deployment job status (polling every 30 seconds)
+  # 4. Posts PR comments with deployment status and preview URL
+  name: CI - Monitor AWS Amplify Service
+  
+  on:
+    pull_request:
+      branches:
+        - dev
+  
+  permissions:
+    id-token: write
+    contents: read
+    pull-requests: write
+  
+  env:
+    AWS_REGION: ${{ vars.AWS_REGION }}
+    ROLE-TO-ASSUME: arn:aws:iam::${{ secrets.AWS_ORG_ACCOUNT }}:role/github-elp-infrastructure
+    AMPLIFY_APP_ID: dumbid
+  
+  jobs:
+    check-deployment:
+      name: Validate Pull Request based on Branch
+      runs-on: ubuntu-latest
+      steps:
+        - name: Login to AWS
+          uses: aws-actions/configure-aws-credentials@v4
+          with:
+            role-to-assume: ${{ env.ROLE-TO-ASSUME }}
+            aws-region: ${{ env.AWS_REGION }}
+  
+        - name: Get PR Branch Name
+          id: branch
+          env:
+            HEAD_REF: ${{ github.head_ref }}
+          run: |
+            echo "name=$HEAD_REF" >> $GITHUB_OUTPUT
+  
+        - name: Check if branch exists in Amplify
+          id: check-branch
+          run: |
+            echo "Checking if branch '${{ steps.branch.outputs.name }}' exists in Amplify..."
+            if aws amplify get-branch --app-id ${{ env.AMPLIFY_APP_ID }} --branch-name ${{ steps.branch.outputs.name }} >/dev/null 2>&1; then
+              echo "Branch '${{ steps.branch.outputs.name }}' exists in Amplify"
+              echo "exists=true" >> $GITHUB_OUTPUT
+            else
+              echo "Branch '${{ steps.branch.outputs.name }}' does not exist in Amplify"
+              echo "exists=false" >> $GITHUB_OUTPUT
+            fi
+  
+        - name: Check Running Jobs
+          if: steps.check-branch.outputs.exists == 'true'
+          id: check-jobs
+          run: |
+            # Get the latest job status and ID
+            JOB_ID=$(aws amplify list-jobs --app-id ${{ env.AMPLIFY_APP_ID }} --branch-name ${{ steps.branch.outputs.name }} --query 'jobSummaries[0].jobId' --output text)
+            STATUS=$(aws amplify list-jobs --app-id ${{ env.AMPLIFY_APP_ID }} --branch-name ${{ steps.branch.outputs.name }} --query 'jobSummaries[0].status' --output text)
+            
+            if [ "$JOB_ID" != "None" ] && [ -n "$JOB_ID" ]; then
+              echo "job_exists=true" >> $GITHUB_OUTPUT
+              echo "job_id=$JOB_ID" >> $GITHUB_OUTPUT
+              echo "status=$STATUS" >> $GITHUB_OUTPUT
+            else
+              echo "job_exists=false" >> $GITHUB_OUTPUT
+            fi
+  
+        - name: Comment Job Status
+          if: steps.check-branch.outputs.exists == 'true'
+          uses: actions/github-script@v7
+          with:
+            script: |
+              const workflowUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+              const jobExists = '${{ steps.check-jobs.outputs.job_exists }}' === 'true';
+              const jobId = '${{ steps.check-jobs.outputs.job_id }}';
+              const status = '${{ steps.check-jobs.outputs.status }}';
+              
+              let message;
+              if (jobExists) {
+                message = `🚀 AWS Amplify deployment for this branch is running.\n\n📋 Job ID: ${jobId}\n\n📊 [GitHub workflow run](${workflowUrl})`;
+              } else {
+                message = `⚠️ No active AWS Amplify deployment found for this branch.`;
+              }
+              
+              github.rest.issues.createComment({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: message
+              })
+  
+        - name: Monitor Deployment
+          if: steps.check-branch.outputs.exists == 'true' && steps.check-jobs.outputs.job_exists == 'true'
+          id: monitor
+          run: |
+            JOB_ID="${{ steps.check-jobs.outputs.job_id }}"
+            echo "Monitoring deployment for Job ID: $JOB_ID"
+            
+            while true; do
+              STATUS=$(aws amplify get-job --app-id ${{ env.AMPLIFY_APP_ID }} --branch-name ${{ steps.branch.outputs.name }} --job-id $JOB_ID --query 'job.summary.status' --output text)
+              
+              echo "Current job status: $STATUS"
+              
+              if [ "$STATUS" = "SUCCEED" ]; then
+                echo "status=success" >> $GITHUB_OUTPUT
+                echo "jobId=$JOB_ID" >> $GITHUB_OUTPUT
+                break
+              elif [ "$STATUS" = "FAILED" ]; then
+                echo "status=failed" >> $GITHUB_OUTPUT
+                echo "jobId=$JOB_ID" >> $GITHUB_OUTPUT
+                break
+              elif [ "$STATUS" = "RUNNING" ] || [ "$STATUS" = "PENDING" ]; then
+                sleep 30
+              else
+                echo "status=unknown" >> $GITHUB_OUTPUT
+                echo "jobId=$JOB_ID" >> $GITHUB_OUTPUT
+                break
+              fi
+            done
+  
+        - name: Set Preview URL
+          if: steps.check-branch.outputs.exists == 'true' && steps.check-jobs.outputs.job_exists == 'true' && steps.monitor.outputs.status == 'success'
+          id: set-url
+          run: |
+            # Get the branch details including the URL
+            BRANCH_DETAILS=$(aws amplify get-branch --app-id ${{ env.AMPLIFY_APP_ID }} --branch-name ${{ steps.branch.outputs.name }})
+            URL=$(echo $BRANCH_DETAILS | jq -r '.branch.displayName')
+            echo "url=https://$URL.${{ env.AMPLIFY_APP_ID }}.amplifyapp.com" >> $GITHUB_OUTPUT
+  
+        - name: Update PR with Deployment Status
+          if: steps.check-branch.outputs.exists == 'true' && steps.check-jobs.outputs.job_exists == 'true' && (steps.monitor.outputs.status == 'success' || steps.monitor.outputs.status == 'failed')
+          uses: actions/github-script@v7
+          with:
+            script: |
+              const workflowUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+              const isSuccess = '${{ steps.monitor.outputs.status }}' === 'success';
+              
+              let message;
+              if (isSuccess) {
+                message = `✅ AWS Amplify deployment completed successfully!\n\n📋 Job ID: ${{ steps.monitor.outputs.jobId }}\n📱 Preview URL: ${{ steps.set-url.outputs.url }}`;
+              } else {
+                message = `❌ AWS Amplify deployment failed!\n\n📋 Job ID: ${{ steps.monitor.outputs.jobId }}\n📊 [GitHub workflow run](${workflowUrl})`;
+              }
+              
+              github.rest.issues.createComment({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: message
+              })
+...

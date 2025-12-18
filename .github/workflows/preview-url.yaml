@@ -1,0 +1,232 @@
+---
+  # This workflow manually manages AWS Amplify branches and deployments for pull requests.
+  # It can be triggered via workflow_dispatch with two operations: 'create' or 'delete'.
+  #
+  # For 'create' operation:
+  #   - Finds the associated open PR for the specified branch
+  #   - Creates an Amplify branch if it doesn't exist
+  #   - Starts or monitors a deployment job
+  #   - Posts PR comments with deployment status and preview URL
+  #
+  # For 'delete' operation:
+  #   - Deletes the specified branch from AWS Amplify
+  #   - Sends a notification to Microsoft Teams
+  #
+  # Workflow steps:
+  # 1. Authenticates with AWS using OIDC
+  # 2. Validates PR exists (for create operation)
+  # 3. Creates/deletes Amplify branch based on operation
+  # 4. Monitors deployment status (for create operation)
+  # 5. Posts PR comments with preview URL or status updates
+  name: Preview URL from Pull Request
+  
+  on:
+    workflow_dispatch:
+      inputs:
+        branch_name:
+          description: 'Branch name'
+          required: true
+          type: string
+        operation:
+          description: 'Operation to perform'
+          required: true
+          type: choice
+          options:
+            - create
+            - delete
+  
+  permissions:
+    id-token: write
+    contents: read
+    pull-requests: write
+  
+  env:
+    AWS_REGION: ${{ vars.AWS_REGION }}
+    ROLE-TO-ASSUME: arn:aws:iam::${{ secrets.AWS_ORG_ACCOUNT }}:role/github-elp-infrastructure
+    AMPLIFY_APP_ID: dumbid
+  
+  jobs:
+    branch-operations:
+      runs-on: ubuntu-latest
+      outputs:
+        preview_url: ${{ steps.set-url.outputs.url }}
+        operation: ${{ inputs.operation }}
+        branch_exists: ${{ steps.check-branch.outputs.exists }}
+      steps:
+        - name: Login to AWS
+          uses: aws-actions/configure-aws-credentials@v4
+          with:
+            role-to-assume: ${{ env.ROLE-TO-ASSUME }}
+            aws-region: ${{ env.AWS_REGION }}
+  
+        - name: Get PR Number
+          if: inputs.operation == 'create'
+          id: pr-number
+          uses: actions/github-script@v7
+          with:
+            github-token: ${{ github.token }}
+            script: |
+              const branch = '${{ inputs.branch_name }}';
+              const prs = await github.rest.pulls.list({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                state: 'open',
+                head: `${context.repo.owner}:${branch}`
+              });
+              
+              if (prs.data.length === 0) {
+                core.setFailed('No open PR found for branch. Please create a Pull Request first.');
+                return;
+              }
+              
+              const pr = prs.data[0];
+              console.log('Found PR:', pr.number);
+              return pr.number;
+            result-encoding: string
+  
+        - name: Check if branch exists
+          id: check-branch
+          run: |
+            if aws amplify get-branch --app-id ${{ env.AMPLIFY_APP_ID }} --branch-name ${{ inputs.branch_name }} >/dev/null 2>&1; then
+              echo "Branch exists"
+              echo "exists=true" >> $GITHUB_OUTPUT
+            else
+              echo "Branch does not exist"
+              echo "exists=false" >> $GITHUB_OUTPUT
+            fi
+  
+        - name: Create Amplify Branch
+          if: inputs.operation == 'create' && steps.check-branch.outputs.exists == 'false'
+          run: |
+            aws amplify create-branch \
+              --app-id ${{ env.AMPLIFY_APP_ID }} \
+              --branch-name ${{ inputs.branch_name }} \
+              --enable-auto-build
+  
+        - name: Check Running Jobs
+          if: inputs.operation == 'create'
+          id: check-jobs
+          run: |
+            # Get the latest job status and ID
+            JOB_ID=$(aws amplify list-jobs --app-id ${{ env.AMPLIFY_APP_ID }} --branch-name ${{ inputs.branch_name }} --query 'jobSummaries[0].jobId' --output text)
+            STATUS=$(aws amplify list-jobs --app-id ${{ env.AMPLIFY_APP_ID }} --branch-name ${{ inputs.branch_name }} --query 'jobSummaries[0].status' --output text)
+            
+            if [ "$STATUS" = "PENDING" ] || [ "$STATUS" = "RUNNING" ]; then
+              echo "Job is already running (Job ID: $JOB_ID)"
+              echo "has_running_job=true" >> $GITHUB_OUTPUT
+              echo "job_id=$JOB_ID" >> $GITHUB_OUTPUT
+            else
+              echo "No running job found"
+              echo "has_running_job=false" >> $GITHUB_OUTPUT
+            fi
+  
+        - name: Start Amplify Job
+          if: inputs.operation == 'create' && steps.check-jobs.outputs.has_running_job == 'false'
+          id: start-job
+          run: |
+            JOB_ID=$(aws amplify start-job \
+              --app-id ${{ env.AMPLIFY_APP_ID }} \
+              --branch-name ${{ inputs.branch_name }} \
+              --job-type RELEASE \
+              --query 'jobSummary.jobId' \
+              --output text)
+            echo "job_id=$JOB_ID" >> $GITHUB_OUTPUT
+  
+        - name: Job running PR comment
+          if: inputs.operation == 'create'
+          uses: actions/github-script@v7
+          with:
+            github-token: ${{ github.token }}
+            script: |
+              const jobId = '${{ steps.check-jobs.outputs.has_running_job == 'true' && steps.check-jobs.outputs.job_id || steps.start-job.outputs.job_id }}';
+              const workflowUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+              github.rest.issues.createComment({
+                issue_number: parseInt(${{ steps.pr-number.outputs.result }}),
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: `🚀 AWS Amplify deployment for this branch is running.\n\n📋 Job ID: ${jobId}\n\n📊 [GitHub workflow run](${workflowUrl})`
+              })
+  
+        - name: Monitor Latest Job Status
+          if: inputs.operation == 'create'
+          id: monitor
+          run: |
+            # Get the latest job ID first
+            JOB_ID=$(aws amplify list-jobs --app-id ${{ env.AMPLIFY_APP_ID }} --branch-name ${{ inputs.branch_name }} --query 'jobSummaries[0].jobId' --output text)
+            echo "Waiting for deployment to complete... (Job ID: $JOB_ID)"
+            
+            while true; do
+              if [ -z "$JOB_ID" ] || [ "$JOB_ID" = "None" ]; then
+                echo "No active jobs found for branch ${{ inputs.branch_name }}"
+                exit 1
+              fi
+              
+              # Get the job status
+              STATUS=$(aws amplify get-job --app-id ${{ env.AMPLIFY_APP_ID }} --branch-name ${{ inputs.branch_name }} --job-id $JOB_ID --query 'job.summary.status' --output text)
+              
+              echo "Current job status: $STATUS"
+              
+              if [ "$STATUS" = "SUCCEED" ]; then
+                echo "Deployment succeeded! (Job ID: $JOB_ID)"
+                echo "status=success" >> $GITHUB_OUTPUT
+                break
+              elif [ "$STATUS" = "FAILED" ]; then
+                echo "Deployment failed! (Job ID: $JOB_ID)"
+                echo "status=failed" >> $GITHUB_OUTPUT
+                exit 1
+              fi
+              
+              sleep 30
+            done
+  
+        - name: Set Preview URL
+          if: inputs.operation == 'create'
+          id: set-url
+          run: |
+            # Get the branch details including the URL
+            BRANCH_DETAILS=$(aws amplify get-branch --app-id ${{ env.AMPLIFY_APP_ID }} --branch-name ${{ inputs.branch_name }})
+            URL=$(echo $BRANCH_DETAILS | jq -r '.branch.displayName')
+            echo "url=https://$URL.${{ env.AMPLIFY_APP_ID }}.amplifyapp.com" >> $GITHUB_OUTPUT
+  
+        - name: Update PR with Success
+          if: inputs.operation == 'create' && steps.monitor.outputs.status == 'success'
+          uses: actions/github-script@v7
+          with:
+            github-token: ${{ github.token }}
+            script: |
+              github.rest.issues.createComment({
+                issue_number: parseInt(${{ steps.pr-number.outputs.result }}),
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: `✅ AWS Amplify deployment completed successfully!\n\n📱 Preview URL: ${{ steps.set-url.outputs.url }}`
+              })
+  
+        - name: Update PR with Failure
+          if: inputs.operation == 'create' && steps.monitor.outputs.status == 'failed'
+          uses: actions/github-script@v7
+          with:
+            github-token: ${{ github.token }}
+            script: |
+              const workflowUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+              github.rest.issues.createComment({
+                issue_number: parseInt(${{ steps.pr-number.outputs.result }}),
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: `❌ AWS Amplify deployment failed!\n\n📊 [GitHub workflow run](${workflowUrl})`
+              })
+  
+        - name: Delete Amplify Branch
+          if: inputs.operation == 'delete' && steps.check-branch.outputs.exists == 'true'
+          run: |
+            aws amplify delete-branch \
+              --app-id ${{ env.AMPLIFY_APP_ID }} \
+              --branch-name ${{ inputs.branch_name }}
+  
+    delete-notification:
+      needs: branch-operations
+      if: needs.branch-operations.outputs.operation == 'delete'
+      uses: emergn-infinity/pipelines/.github/workflows/ms_teams_notify.yaml@main
+      with:
+        notification-summary: ${{ needs.branch-operations.outputs.branch_exists == 'true' && format('Branch ''{0}'' was successfully deleted from AWS Amplify Frontend service', inputs.branch_name) || format('Branch ''{0}'' does not exist on AWS Amplify Frontend service', inputs.branch_name) }}
+        ms-teams-webhook-uri: ${{ vars.MS_TEAMS_CHANNEL_NON_PRODUCTION_ALERTS }}
+      secrets: inherit
