@@ -1,0 +1,58 @@
+---
+# This workflow lints GitHub Actions workflow files and YAML files in pull requests.
+# It uses Super Linter to validate GitHub Actions syntax and YAML formatting.
+#
+# How it works:
+# 1. Triggers on pull requests targeting the 'main' branch when files in '.github/**' are changed
+# 2. Uses Super Linter with custom configuration files from '.github/linters/'
+# 3. Validates GitHub Actions workflows using actionlint
+# 4. Validates YAML syntax and formatting
+# 5. Reports linting results as status checks on the PR
+#
+# Usage:
+#   - Automatically runs when PRs modify files in '.github/**'
+#   - No manual intervention needed
+#   - Linting errors will appear as status checks on the PR
+name: Lint GitHub Actions
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - '.github/**'
+
+permissions:
+  contents: read
+  packages: read
+  statuses: write
+
+jobs:
+  gha-lint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: List actionlint.yml
+        run: |
+          ls -lhtar .github/linters/actionlint.yml
+          ls -lhtar .github/linters/.yaml-lint.yml
+      - name: Super Linter Run
+        uses: super-linter/super-linter/slim@v8
+        env:
+          VALIDATE_ALL_CODEBASE: false
+          LINTER_RULES_PATH: .github/linters
+          LOG_LEVEL: INFO
+          GITHUB_TOKEN: ${{ github.token }}
+          DEFAULT_BRANCH: main
+          # GitHub Actions
+          VALIDATE_GITHUB_ACTIONS: true
+          GITHUB_ACTIONS_CONFIG_FILE: actionlint.yml
+          GITHUB_ACTIONS_COMMAND_ARGS: "-shellcheck= -pyflakes="
+          # YAML
+          VALIDATE_YAML: true
+          YAML_CONFIG_FILE: .yaml-lint.yml
+...
