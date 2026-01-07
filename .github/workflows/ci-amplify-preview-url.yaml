@@ -22,7 +22,7 @@
   
   env:
     AWS_REGION: ${{ vars.AWS_REGION }}
-    ROLE-TO-ASSUME: arn:aws:iam::${{ secrets.AWS_ORG_ACCOUNT }}:role/github-elp-infrastructure
+    ROLE-TO-ASSUME: arn:aws:iam::${{ secrets.AWS_ORG_ACCOUNT }}:role/github-actions-role
     AMPLIFY_APP_ID: dumbid
   
   jobs:

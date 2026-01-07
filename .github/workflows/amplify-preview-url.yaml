@@ -42,7 +42,7 @@
   
   env:
     AWS_REGION: ${{ vars.AWS_REGION }}
-    ROLE-TO-ASSUME: arn:aws:iam::${{ secrets.AWS_ORG_ACCOUNT }}:role/github-elp-infrastructure
+    ROLE-TO-ASSUME: arn:aws:iam::${{ secrets.AWS_ORG_ACCOUNT }}:role/github-actions-role
     AMPLIFY_APP_ID: dumbid
   
   jobs:
@@ -228,5 +228,5 @@
       uses: emergn-infinity/pipelines/.github/workflows/ms_teams_notify.yaml@main
       with:
         notification-summary: ${{ needs.branch-operations.outputs.branch_exists == 'true' && format('Branch ''{0}'' was successfully deleted from AWS Amplify Frontend service', inputs.branch_name) || format('Branch ''{0}'' does not exist on AWS Amplify Frontend service', inputs.branch_name) }}
-        ms-teams-webhook-uri: ${{ vars.MS_TEAMS_CHANNEL_NON_PRODUCTION_ALERTS }}
+        ms-teams-webhook-uri: ${{ vars.MS_TEAMS_WEBHOOK_URI }}
       secrets: inherit
