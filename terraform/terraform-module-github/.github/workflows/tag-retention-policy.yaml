@@ -8,20 +8,12 @@
 #
 # How it works:
 #   1. Retrieves all tags from the repository and sorts them by version
-#   2. Identifies the latest major version based on the selected versioning scheme
+#   2. Identifies the latest major version (expects tags in format vX.0.0, e.g., v1.0.0, v2.0.0)
 #   3. Applies retention rules:
 #      - Latest major version: Keeps ALL minor/patch versions (e.g., v2.0.0, v2.1.0, v2.1.1, etc.)
 #      - Previous 2 major versions: Keeps the last 2 versions of each
 #   4. Deletes all tags that don't match the retention criteria
 #   5. Sends a notification to MS Teams (if configured) with the cleanup summary
-#
-# Versioning Schemes:
-#   - major: Expects tags in format vX.0.0 (e.g., v1.0.0, v2.0.0)
-#     - Keeps all versions of the latest major
-#     - Keeps last 2 versions of previous 2 majors
-#   - incremental: Expects tags in format vX.Y.Z (e.g., v1.2.3, v2.0.1)
-#     - Keeps last 5 versions of the latest major
-#     - Keeps last 2 versions of previous 2 majors
 #
 # Triggers:
 #   - Scheduled: Runs automatically on the 1st day of every month at 10:10 AM
@@ -29,25 +21,15 @@
 #
 # Parameters:
 #   - dry-run: If true, shows what would be deleted without actually deleting tags
-#   - versioning-scheme: Choose between "major" or "incremental" (default: major)
 #   - ms-teams-webhook-uri: Optional webhook URI for notifications (can also use vars.MS_TEAMS_WEBHOOK_URI)
 #
-# Examples:
-#   Major scheme:
-#     If you have tags: v1.0.0, v1.1.0, v1.2.0, v2.0.0, v2.1.0, v2.2.0, v3.0.0, v3.1.0
-#     It will:
-#     - Keep: v3.0.0, v3.1.0 (all of latest major v3)
-#     - Keep: v2.1.0, v2.2.0 (last 2 of previous major v2)
-#     - Keep: v1.1.0, v1.2.0 (last 2 of previous major v1)
-#     - Delete: v1.0.0, v2.0.0
-#
-#   Incremental scheme:
-#     If you have tags: v1.0.0, v1.1.0, v1.2.0, v2.0.0, v2.0.1, v2.1.0, v2.1.1, v2.2.0, v3.0.0, v3.0.1, v3.1.0, v3.1.1, v3.2.0
-#     It will:
-#     - Keep: v3.0.0, v3.0.1, v3.1.0, v3.1.1, v3.2.0 (last 5 of latest major v3)
-#     - Keep: v2.1.1, v2.2.0 (last 2 of previous major v2)
-#     - Keep: v1.1.0, v1.2.0 (last 2 of previous major v1)
-#     - Delete: v1.0.0, v2.0.0, v2.0.1, v2.1.0
+# Example:
+#   If you have tags: v1.0.0, v1.1.0, v1.2.0, v2.0.0, v2.1.0, v2.2.0, v3.0.0, v3.1.0
+#   It will:
+#   - Keep: v3.0.0, v3.1.0 (all of latest major v3)
+#   - Keep: v2.1.0, v2.2.0 (last 2 of previous major v2)
+#   - Keep: v1.1.0, v1.2.0 (last 2 of previous major v1)
+#   - Delete: v1.0.0, v2.0.0
 
 name: Tagging Retention Policy 
 
@@ -59,11 +41,6 @@ on:
         type: boolean
         required: false
         default: false
-      versioning-scheme:
-        description: 'Versioning scheme to use (major: vX.0.0 or incremental: vX.Y.Z)'
-        type: string
-        required: false
-        default: major
       ms-teams-webhook-uri:
         description: 'MS Teams webhook URI for notifications'
         required: false
@@ -76,7 +53,6 @@ permissions:
 
 env:
   DRY_RUN: ${{ github.event.inputs.dry-run || 'false' }}
-  VERSIONING_SCHEME: ${{ github.event.inputs.versioning-scheme || 'major' }}
   GITHUB_TOKEN: ${{ github.token }}
 
 jobs:
@@ -107,59 +83,33 @@ jobs:
             exit 0
           fi
           
-          # Get latest major version based on versioning scheme
-          if [ "$VERSIONING_SCHEME" = "major" ]; then
-            echo "Using major versioning scheme (vX.0.0)"
-            LATEST_MAJOR=$(echo "$ALL_TAGS" | grep -E '^v[0-9]+\.0\.0$' | tail -n 1 | cut -d. -f1)
-            if [ -z "$LATEST_MAJOR" ]; then
-              echo "No major version tags found (format: v1.0.0)"
-              echo "tags_found=false" >> $GITHUB_ENV
-              echo "tags_count=0" >> $GITHUB_ENV
-              echo "kept_majors=none" >> $GITHUB_ENV
-              echo "::endgroup::"
-              exit 0
-            fi
-          else
-            echo "Using incremental versioning scheme (vX.Y.Z)"
-            LATEST_MAJOR=$(echo "$ALL_TAGS" | tail -n 1 | cut -d. -f1)
+          # Get latest major version (expects format vX.0.0)
+          echo "Using major versioning scheme (vX.0.0)"
+          LATEST_MAJOR=$(echo "$ALL_TAGS" | grep -E '^v[0-9]+\.0\.0$' | tail -n 1 | cut -d. -f1)
+          if [ -z "$LATEST_MAJOR" ]; then
+            echo "No major version tags found (format: v1.0.0)"
+            echo "tags_found=false" >> $GITHUB_ENV
+            echo "tags_count=0" >> $GITHUB_ENV
+            echo "kept_majors=none" >> $GITHUB_ENV
+            echo "::endgroup::"
+            exit 0
           fi
           
-          # Initialize KEEP_TAGS based on versioning scheme
-          if [ "$VERSIONING_SCHEME" = "major" ]; then
-            # For major versioning, keep all minor versions of latest major
-            KEEP_TAGS="$LATEST_MAJOR.*"
-            echo "Keeping all tags for latest major version: $LATEST_MAJOR.*"
-          else
-            # For incremental versioning, keep last 5 versions from latest major
-            LATEST_VERSIONS=$(echo "$ALL_TAGS" | grep "^$LATEST_MAJOR\." | tail -n 5)
-            LATEST_VERSIONS_PATTERN=$(echo "$LATEST_VERSIONS" | tr '\n' '|' | sed 's/|$//' | sed 's/\./\\./g')
-            KEEP_TAGS="$LATEST_VERSIONS_PATTERN"
-            echo "Keeping last 5 versions for latest major $LATEST_MAJOR:"
-            echo "$LATEST_VERSIONS"
-          fi
+          # Keep all minor versions of latest major
+          KEEP_TAGS="$LATEST_MAJOR.*"
+          echo "Keeping all tags for latest major version: $LATEST_MAJOR.*"
           
           echo "latest_major=$LATEST_MAJOR" >> $GITHUB_ENV
           
-          # Get previous 2 major versions and their latest versions
+          # Get previous 2 major versions and their latest 2 versions
           KEPT_MAJORS="$LATEST_MAJOR"
           CURRENT_MAJOR_NUM=$(echo "$LATEST_MAJOR" | sed 's/v//')
           
           for i in $(seq 1 2); do
             PREV_MAJOR="v$((CURRENT_MAJOR_NUM - i))"
-            if [ "$VERSIONING_SCHEME" = "major" ]; then
-              # For major versioning, look for the major version and its latest 2 minor versions
-              MAJOR_EXISTS=$(echo "$ALL_TAGS" | grep -E "^$PREV_MAJOR\.0\.0$" || true)
-              if [ ! -z "$MAJOR_EXISTS" ]; then
-                PREV_VERSIONS=$(echo "$ALL_TAGS" | grep "^$PREV_MAJOR\." | tail -n 2)
-                if [ ! -z "$PREV_VERSIONS" ]; then
-                  PREV_VERSIONS_PATTERN=$(echo "$PREV_VERSIONS" | tr '\n' '|' | sed 's/|$//' | sed 's/\./\\./g')
-                  KEEP_TAGS="$KEEP_TAGS|$PREV_VERSIONS_PATTERN"
-                  KEPT_MAJORS="$KEPT_MAJORS,$PREV_MAJOR"
-                  echo "Keeping last 2 versions for $PREV_MAJOR: $PREV_VERSIONS"
-                fi
-              fi
-            else
-              # For incremental versioning, keep last 2 versions of previous majors
+            # Look for the major version and its latest 2 minor versions
+            MAJOR_EXISTS=$(echo "$ALL_TAGS" | grep -E "^$PREV_MAJOR\.0\.0$" || true)
+            if [ ! -z "$MAJOR_EXISTS" ]; then
               PREV_VERSIONS=$(echo "$ALL_TAGS" | grep "^$PREV_MAJOR\." | tail -n 2)
               if [ ! -z "$PREV_VERSIONS" ]; then
                 PREV_VERSIONS_PATTERN=$(echo "$PREV_VERSIONS" | tr '\n' '|' | sed 's/|$//' | sed 's/\./\\./g')

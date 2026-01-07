@@ -1,0 +1,209 @@
+---
+# This workflow validates and plans Terraform module changes, and automatically updates documentation.
+# It provides comprehensive CI checks for Terraform modules including validation, planning, and docs generation.
+#
+# How it works:
+# 1. Triggers on pull requests (ignoring changes to .github/**, CODEOWNERS, README.md)
+# 2. Can also be manually triggered via workflow_dispatch with custom parameters
+# 3. Main jobs:
+#    - plan: Runs terraform init, validate, and plan on the example folder
+#      - Posts a summary comment on the PR with validation status and plan output
+#    - how-to-use: Posts usage examples as a PR comment
+#    - docs-repository: Automatically updates README.md in the repository folder using terraform-docs
+#    - docs-organization: Automatically updates README.md in the organization folder using terraform-docs
+# 4. Documentation jobs automatically commit and push updates to the PR branch
+#
+# Usage:
+#   - Automatically runs on PRs that modify Terraform files
+#   - Manual trigger: Go to Actions > "CI - Terraform" > Run workflow
+#   - Parameters:
+#     - example-folder: Path to the example folder (default: 'example/')
+#     - tf-version: Terraform version to use (default: '1.9.7')
+#     - ci-runner-type: Runner type - use 'ubuntu-22.04-4core' if MongoDB Atlas access is needed (default: 'ubuntu-latest')
+name: 'CI - Terraform'
+on:
+  pull_request:
+    paths-ignore:
+      - '.github/**'
+      - 'CODEOWNERS'
+      - 'README.md'
+  workflow_dispatch:
+    inputs:
+      example-folder:
+        description: 'Path to the example folder'
+        type: string
+        required: false
+        default: 'example/'
+      tf-version:
+        description: 'Terraform version'
+        type: string
+        required: false
+        default: '1.9.7'
+      ci-runner-type:
+        description: 'The runner type: ubuntu-latest or ubuntu-22.04-4core if need mongodb atlas access'
+        required: false
+        type: string
+        default: 'ubuntu-latest'
+
+permissions:
+  id-token: write
+  contents: write
+  pull-requests: write
+
+env:
+  TF_VERSION: ${{ github.event.inputs.tf-version || '1.9.7' }}
+  ENV_FOLDER: ${{ github.event.inputs.example-folder || 'example/' }}
+  AWS_REGION: ${{ vars.AWS_REGION }}
+  ROLE-TO-ASSUME: arn:aws:iam::${{ secrets.AWS_ORG_ACCOUNT }}:role/github-actions-role
+
+jobs:
+  plan:
+    name: 'Plan'
+    runs-on: 'ubuntu-latest'
+    defaults:
+      run:
+        shell: bash
+        working-directory: ${{ env.ENV_FOLDER }}
+    steps:
+      - name: Checkout repository code
+        uses: actions/checkout@v4
+      - name: List directory
+        run: |
+          ls -lhatr
+      - name: Login to AWS
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ env.ROLE-TO-ASSUME }}
+          aws-region: ${{ env.AWS_REGION }}
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+      - name: Terraform Init
+        id: init
+        run: |
+          terraform init -upgrade -no-color
+      - name: Terraform Validate
+        id: validate
+        run: terraform validate -no-color
+      - name: Terraform Plan
+        id: plan
+        run: terraform plan -no-color -input=false -out=plan.tfplan
+      - name: Post Terraform Summary
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7.0.1
+        with:
+          github-token: ${{ github.token }}
+          script: |
+            const output = `## 🚀 Drift Terraform Module
+
+            *Pusher: @${{ github.actor }}, Action: \`${{ github.event_name }}\`, Working Directory: \`${{ env.ENV_FOLDER }}\`, Workflow: \`${{ github.workflow }}\`*
+            
+            ### 🔍 Validation Status
+            - Initialization ⚙️: \`${{ steps.init.outcome }}\`
+            - Validation 🤖: \`${{ steps.validate.outcome }}\`
+
+            <details><summary>Validation Details</summary>
+
+            \`\`\`
+            ${{ steps.validate.outputs.stdout }}
+            \`\`\`
+
+            </details>
+
+            ### 📖 Plan
+            This plan shows how the module behaves with the example configuration:
+
+            <details><summary>Show Plan</summary>
+
+            \`\`\`
+            ${{ steps.plan.outputs.stdout }}
+            \`\`\`
+
+            </details>
+            `;
+
+            await github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: output
+            });
+
+  how-to-use:
+    if: github.event_name == 'pull_request'
+    name: 'How to use this module'
+    needs: plan
+    runs-on: ubuntu-latest
+    steps:
+      - name: Post Module Usage
+        uses: actions/github-script@v7.0.1
+        with:
+          github-token: ${{ github.token }}
+          script: |
+            const output = `### 📚 Module Usage
+            Here's how to use this module:
+
+            \`\`\`hcl
+            # Example how to use organization module
+            module "{example}" {
+              source = "git::https://github.com/your-org/terraform-module-github.git//organization?ref=vX.X.X"
+
+              key = "{value}"
+            }
+            
+            # Example how to use repository module
+            module "{example}" {
+              source = "git::https://github.com/your-org/terraform-module-github.git//repository?ref=vX.X.X"
+
+              key = "{value}"
+            }
+            \`\`\`
+            `;
+
+            await github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: output
+            });
+
+  docs-repository:
+    if: github.event_name == 'pull_request'
+    name: 'Repository folder README file update'
+    needs: [plan]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
+      - uses: terraform-docs/gh-actions@v1.0.0
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        with:
+          working-dir: repository
+          output-file: README.md
+          output-method: inject
+          git-push: "true"
+          git-commit-message: "docs: update README.md"
+  
+  docs-organization:
+    if: github.event_name == 'pull_request'
+    name: 'Organization folder README file update'
+    needs: [plan]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
+      - uses: terraform-docs/gh-actions@v1.0.0
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        with:
+          working-dir: organization
+          output-file: README.md
+          output-method: inject
+          git-push: "true"
+          git-commit-message: "docs: update README.md"
+
+...

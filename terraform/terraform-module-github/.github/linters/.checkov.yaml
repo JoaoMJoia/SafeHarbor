@@ -1,0 +1,12 @@
+---
+soft-fail: false
+quiet: true
+
+framework:
+  - github_actions
+  - terraform
+
+skip-check:
+  - CKV_GHA_7
+  - CKV_TF_1
+...

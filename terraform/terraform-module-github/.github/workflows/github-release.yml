@@ -1,0 +1,100 @@
+---
+# This workflow automates the release process for the Terraform module.
+# It handles version bumping, changelog generation, GitHub release creation, and notifications.
+#
+# How it works:
+# 1. Can be called as a reusable workflow (workflow_call) from other workflows
+# 2. Release process steps:
+#    - Checks out the repository with full history
+#    - Bumps version and creates a new git tag (format: vX.X.X) based on conventional commits
+#    - Generates/updates CHANGELOG.md with commit history (excludes docs, uses gitmojis)
+#    - Creates a GitHub release with the new tag, changelog, and auto-generated release notes
+#    - Creates a pull request with the changelog updates
+#    - Automatically merges the PR using squash merge
+#    - Sends a notification to MS Teams (if webhook URI is configured)
+# 3. Only runs on the 'main' branch
+#
+# Usage:
+#   - Typically called from another workflow (e.g., when code is merged to main)
+#   - Requires conventional commit messages for proper version bumping
+#   - Ensure MS_TEAMS_WEBHOOK_URI is set in repository variables for notifications
+name: 'GitHub Package Release'
+
+on:
+  workflow_call:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+env:
+  MS_TEAMS_WEBHOOK_URI: ${{ vars.MS_TEAMS_WEBHOOK_URI }}
+
+jobs:
+  release:
+    name: 'Create release'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Repository Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Bump version and push tag
+        id: tag_version
+        uses: mathieudutour/github-tag-action@v6.2
+        with:
+          github_token: ${{ github.token }}
+          release_branches: main
+          tag_prefix: v
+
+      - name: Update CHANGELOG
+        id: changelog
+        uses: requarks/changelog-action@v1.10.0
+        with:
+          token: ${{ github.token }}
+          tag: ${{ steps.tag_version.outputs.new_tag }}
+          writeToFile: true
+          excludeTypes: docs
+          includeRefIssues: false
+          useGitmojis: true
+          reverseOrder: true
+
+      - name: Create a GitHub release
+        uses: ncipollo/release-action@v1
+        with:
+          tag: ${{ steps.tag_version.outputs.new_tag }}
+          name: Release ${{ steps.tag_version.outputs.new_tag }}
+          body: ${{ steps.tag_version.outputs.changelog }}
+          generateReleaseNotes: true
+          makeLatest: true 
+          allowUpdates: true
+          draft: false
+
+      - name: Create Pull Request
+        id: create-pr
+        uses: peter-evans/create-pull-request@v7.0.5
+        with:
+          token: ${{ github.token }}
+          commit-message: 'docs: package release'
+          title: 'docs: package release'
+          body: 'Automated package release'
+          branch: package-release
+          base: main
+
+      - name: Merge Pull Request
+        uses: juliangruber/merge-pull-request-action@v1.3.1
+        with:
+          github-token: ${{ github.token }}
+          number: ${{ steps.create-pr.outputs.pull-request-number }}
+          method: squash
+
+      - name: Notify MS Teams of new release
+        if: env.MS_TEAMS_WEBHOOK_URI != ''
+        uses: jdcargile/ms-teams-notification@v1.4
+        with:
+          github-token: ${{ github.token }}
+          ms-teams-webhook-uri: ${{ env.MS_TEAMS_WEBHOOK_URI }}
+          notification-color: '00FF00'
+          notification-summary: "${{ github.repository }} ${{ steps.tag_version.outputs.new_tag }} released!"
+...
