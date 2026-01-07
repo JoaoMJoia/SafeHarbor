@@ -1,0 +1,101 @@
+# Validate which files are being ignored
+# based on the repository type of code.
+
+# Ignore Mac .DS_Store files
+.DS_Store
+
+# Local .terraform directories
+**/.terraform
+
+# .tfstate files
+*.tfstate
+*.tfstate.*
+
+# Ignore override files as they are usually used to override resources locally and so
+# are not checked in
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+
+# Include tfplan files to ignore the plan output of command: terraform plan -out=tfplan
+*tfplan*
+
+# Ignore CLI configuration files
+.terraformrc
+terraform.rc
+
+# SSH Keys
+*.pem
+
+# Logs
+logs
+log
+*.log
+*debug.log*
+
+# IDEs and editors
+/.idea
+.project
+.classpath
+.c9/
+*.launch
+.settings/
+*.sublime-workspace
+
+# IDE - VSCode
+.vscode/*
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+
+# Kubeconfig files
+kubeconfig*
+
+# Local environment files
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Ignore SOPS files except encrypted
+**/sops_secrets/*.*
+!**/sops_secrets/*.enc.*
+
+# NodeJS 
+/dist
+/node_modules
+/documentation
+/.pnp
+.pnp.js
+
+# ESLint
+.eslintcache
+
+# Tests
+/coverage
+/.nyc_output
+
+# next.js
+/.next/
+/out/
+
+# lock
+yarn.lock
+
+# IDS assets
+/public/assets
+/public/app/assets
+
+# IDS token
+.npmrc
+
+# Playwright
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/
+
+# tsc cache
+tsconfig.tsbuildinfo
