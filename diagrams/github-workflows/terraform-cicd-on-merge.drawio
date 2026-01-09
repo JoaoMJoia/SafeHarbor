@@ -1,0 +1,130 @@
+<mxfile host="Electron" agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) draw.io/29.0.3 Chrome/140.0.7339.249 Electron/38.7.0 Safari/537.36" version="29.0.3">
+  <diagram name="Page-1" id="fvRVHGS3rkYx4_wCLrew">
+    <mxGraphModel dx="858" dy="562" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="vDSkdKOsR0WLfbwBuVHa-4" value="" style="rounded=1;whiteSpace=wrap;html=1;shadow=1;fillColor=#fff2cc;dashed=1;strokeColor=default;" vertex="1" parent="1">
+          <mxGeometry x="2100" y="997.82" width="420" height="230" as="geometry" />
+        </mxCell>
+        <mxCell id="3PkbmrK094pr91opABPB-86" value="&lt;span style=&quot;font-family: &amp;quot;MesloLGS NF&amp;quot;, Monaco, &amp;quot;Courier New&amp;quot;, monospace, Menlo, Monaco, &amp;quot;Courier New&amp;quot;, monospace; font-size: 16px;&quot;&gt;CI/CD - Terraform AWS Infrastructure&lt;/span&gt;" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;" parent="1" vertex="1">
+          <mxGeometry x="60" y="772.82" width="370" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="h9KeT2P2xpoq7i5WgNcR-8" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;sketch=1;curveFitting=1;jiggle=2;shadow=1;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" parent="1" source="3PkbmrK094pr91opABPB-87" target="h9KeT2P2xpoq7i5WgNcR-1" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="3PkbmrK094pr91opABPB-87" value="GHA&lt;br&gt;ci-cd-aws.yaml" style="dashed=0;outlineConnect=0;html=1;align=center;labelPosition=center;verticalLabelPosition=bottom;verticalAlign=top;shape=mxgraph.webicons.github;gradientColor=#DFDEDE;aspect=fixed;shadow=1;" parent="1" vertex="1">
+          <mxGeometry x="240" y="880.43" width="64.06" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="BvMCWaTnpbiaOZuSAGn3-12" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;sketch=1;curveFitting=1;jiggle=2;shadow=1;" parent="1" source="3PkbmrK094pr91opABPB-88" target="BvMCWaTnpbiaOZuSAGn3-6" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="200" y="1118" />
+              <mxPoint x="200" y="1320" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="h9KeT2P2xpoq7i5WgNcR-11" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;sketch=1;curveFitting=1;jiggle=2;shadow=1;" parent="1" source="3PkbmrK094pr91opABPB-88" target="3PkbmrK094pr91opABPB-87" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="200" y="1118" />
+              <mxPoint x="200" y="910" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="3PkbmrK094pr91opABPB-88" value="&lt;div style=&quot;&quot;&gt;&lt;span style=&quot;font-size: 11px; background-color: rgb(240, 242, 242);&quot;&gt;Pull Request&lt;br&gt;branch: main&lt;/span&gt;&lt;/div&gt;" style="image;aspect=fixed;html=1;points=[];align=center;fontSize=12;image=img/lib/azure2/general/Files.svg;shadow=1;" parent="1" vertex="1">
+          <mxGeometry x="60" y="1085.46" width="60" height="65.63" as="geometry" />
+        </mxCell>
+        <mxCell id="3PkbmrK094pr91opABPB-91" value="&lt;span style=&quot;font-family: &amp;quot;MesloLGS NF&amp;quot;, Monaco, &amp;quot;Courier New&amp;quot;, monospace, Menlo, Monaco, &amp;quot;Courier New&amp;quot;, monospace; font-size: 16px;&quot;&gt;CI&lt;/span&gt;" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;" parent="1" vertex="1">
+          <mxGeometry x="190" y="837.3899999999999" width="40" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="h9KeT2P2xpoq7i5WgNcR-10" value="" style="rounded=0;orthogonalLoop=1;jettySize=auto;html=1;sketch=1;curveFitting=1;jiggle=2;shadow=1;" parent="1" source="3PkbmrK094pr91opABPB-92" target="3PkbmrK094pr91opABPB-95" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="3PkbmrK094pr91opABPB-92" value="&lt;div style=&quot;&quot;&gt;Post comment on PR:&lt;/div&gt;&lt;ol&gt;&lt;li style=&quot;text-align: justify;&quot;&gt;Terraform Init&lt;/li&gt;&lt;li style=&quot;text-align: justify;&quot;&gt;Terraform Validate&lt;/li&gt;&lt;li style=&quot;text-align: justify;&quot;&gt;Terraform Plan&lt;/li&gt;&lt;/ol&gt;" style="rounded=1;whiteSpace=wrap;html=1;shadow=1;glass=0;align=center;" parent="1" vertex="1">
+          <mxGeometry x="759" y="867.39" width="160" height="86.1" as="geometry" />
+        </mxCell>
+        <mxCell id="3PkbmrK094pr91opABPB-94" value="&lt;div style=&quot;&quot;&gt;&lt;span style=&quot;background-color: transparent; color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));&quot;&gt;Post comment on PR:&lt;/span&gt;&lt;/div&gt;&lt;div&gt;&lt;ol&gt;&lt;li style=&quot;text-align: justify;&quot;&gt;&lt;span style=&quot;background-color: transparent; color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));&quot;&gt;Cloud Infracost&lt;/span&gt;&lt;/li&gt;&lt;/ol&gt;&lt;/div&gt;" style="rounded=1;whiteSpace=wrap;html=1;shadow=1;glass=0;align=center;" parent="1" vertex="1">
+          <mxGeometry x="1159" y="875.4399999999999" width="160" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="h9KeT2P2xpoq7i5WgNcR-12" value="" style="rounded=0;orthogonalLoop=1;jettySize=auto;html=1;shadow=1;sketch=1;curveFitting=1;jiggle=2;" parent="1" source="3PkbmrK094pr91opABPB-95" target="3PkbmrK094pr91opABPB-94" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="3PkbmrK094pr91opABPB-95" value="Update README.md File" style="rounded=1;whiteSpace=wrap;html=1;shadow=1;glass=0;" parent="1" vertex="1">
+          <mxGeometry x="959" y="893.15" width="160" height="34.57" as="geometry" />
+        </mxCell>
+        <mxCell id="3PkbmrK094pr91opABPB-100" value="&lt;span style=&quot;font-family: &amp;quot;MesloLGS NF&amp;quot;, Monaco, &amp;quot;Courier New&amp;quot;, monospace, Menlo, Monaco, &amp;quot;Courier New&amp;quot;, monospace; font-size: 16px;&quot;&gt;CD&lt;/span&gt;" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;" parent="1" vertex="1">
+          <mxGeometry x="1359" y="838.9099999999999" width="40" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="BvMCWaTnpbiaOZuSAGn3-4" value="Check Pull Request tittle based on Conventional Commit Message" style="rounded=1;whiteSpace=wrap;html=1;shadow=1;glass=0;" parent="1" vertex="1">
+          <mxGeometry x="360" y="1270" width="160" height="85" as="geometry" />
+        </mxCell>
+        <mxCell id="BvMCWaTnpbiaOZuSAGn3-5" style="rounded=0;orthogonalLoop=1;jettySize=auto;html=1;sketch=1;curveFitting=1;jiggle=2;shadow=1;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" parent="1" source="BvMCWaTnpbiaOZuSAGn3-6" target="BvMCWaTnpbiaOZuSAGn3-4" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="350" y="1313" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="BvMCWaTnpbiaOZuSAGn3-6" value="GHA&lt;br&gt;pr-title-check.yaml" style="dashed=0;outlineConnect=0;html=1;align=center;labelPosition=center;verticalLabelPosition=bottom;verticalAlign=top;shape=mxgraph.webicons.github;gradientColor=#DFDEDE;aspect=fixed;shadow=1;" parent="1" vertex="1">
+          <mxGeometry x="240" y="1282.5" width="64.06" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="PlJ75UTxFvQ4tDJdA3ZF-10" value="&lt;b&gt;Pull Request Merged and Closed&lt;/b&gt;" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;" parent="1" vertex="1">
+          <mxGeometry x="1359" y="867.3899999999999" width="210" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="PlJ75UTxFvQ4tDJdA3ZF-12" value="&lt;div style=&quot;text-align: left;&quot;&gt;&lt;font face=&quot;Helvetica&quot;&gt;GitHub Package Release:&lt;font style=&quot;color: rgb(0, 0, 0);&quot;&gt;&lt;span style=&quot;background-color: transparent; color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));&quot;&gt;&lt;/span&gt;&lt;/font&gt;&lt;/font&gt;&lt;/div&gt;&lt;div&gt;&lt;ol&gt;&lt;li style=&quot;text-align: left;&quot;&gt;&lt;span style=&quot;box-sizing: border-box; margin-bottom: 0px; background-color: light-dark(#ffffff, var(--ge-dark-color, #121212));&quot;&gt;&lt;font style=&quot;color: rgb(0, 0, 0);&quot; face=&quot;Helvetica&quot;&gt;Tag Versioning&lt;/font&gt;&lt;/span&gt;&lt;/li&gt;&lt;li style=&quot;text-align: left;&quot;&gt;&lt;span style=&quot;box-sizing: border-box; margin-bottom: 0px;&quot;&gt;&lt;span style=&quot;box-sizing: border-box; margin-bottom: 0px; background-color: light-dark(#ffffff, var(--ge-dark-color, #121212));&quot;&gt;&lt;font style=&quot;color: rgb(0, 0, 0);&quot; face=&quot;Helvetica&quot;&gt;Update CHANGELOG.md&lt;/font&gt;&lt;/span&gt;&lt;/span&gt;&lt;/li&gt;&lt;li style=&quot;text-align: left;&quot;&gt;&lt;span style=&quot;box-sizing: border-box; margin-bottom: 0px;&quot;&gt;&lt;span style=&quot;box-sizing: border-box; margin-bottom: 0px;&quot;&gt;&lt;span style=&quot;box-sizing: border-box; margin-bottom: 0px; background-color: light-dark(#ffffff, var(--ge-dark-color, #121212));&quot;&gt;&lt;font style=&quot;color: rgb(0, 0, 0);&quot; face=&quot;Helvetica&quot;&gt;GitHub Release&lt;/font&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/li&gt;&lt;li style=&quot;text-align: left;&quot;&gt;&lt;span style=&quot;box-sizing: border-box; margin-bottom: 0px;&quot;&gt;&lt;span style=&quot;box-sizing: border-box; margin-bottom: 0px;&quot;&gt;&lt;span style=&quot;box-sizing: border-box; margin-bottom: 0px;&quot;&gt;&lt;span style=&quot;box-sizing: border-box; margin-bottom: 0px; background-color: light-dark(#ffffff, var(--ge-dark-color, #121212));&quot;&gt;&lt;font style=&quot;color: rgb(0, 0, 0);&quot; face=&quot;Helvetica&quot;&gt;Create and Merge Pull Request&lt;/font&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/li&gt;&lt;li style=&quot;text-align: left;&quot;&gt;&lt;span style=&quot;box-sizing: border-box; margin-bottom: 0px;&quot;&gt;&lt;span style=&quot;box-sizing: border-box; margin-bottom: 0px;&quot;&gt;&lt;span style=&quot;box-sizing: border-box; margin-bottom: 0px;&quot;&gt;&lt;span style=&quot;box-sizing: border-box; margin-bottom: 0px;&quot;&gt;&lt;span style=&quot;box-sizing: border-box; margin-bottom: 0px; background-color: light-dark(#ffffff, var(--ge-dark-color, #121212));&quot;&gt;&lt;font style=&quot;color: rgb(0, 0, 0);&quot; face=&quot;Helvetica&quot;&gt;Notify channel&lt;/font&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/li&gt;&lt;/ol&gt;&lt;/div&gt;" style="rounded=1;whiteSpace=wrap;html=1;shadow=1;glass=0;align=center;" parent="1" vertex="1">
+          <mxGeometry x="2239" y="1051.73" width="242.97" height="122.18" as="geometry" />
+        </mxCell>
+        <mxCell id="PlJ75UTxFvQ4tDJdA3ZF-13" style="rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0;entryY=0.5;entryDx=0;entryDy=0;sketch=1;curveFitting=1;jiggle=2;shadow=1;" parent="1" source="PlJ75UTxFvQ4tDJdA3ZF-14" target="PlJ75UTxFvQ4tDJdA3ZF-12" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="PlJ75UTxFvQ4tDJdA3ZF-14" value="GHA&lt;br&gt;release.yaml" style="dashed=0;outlineConnect=0;html=1;align=center;labelPosition=center;verticalLabelPosition=bottom;verticalAlign=top;shape=mxgraph.webicons.github;gradientColor=#DFDEDE;aspect=fixed;shadow=1;" parent="1" vertex="1">
+          <mxGeometry x="2119" y="1082.82" width="64.06" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="vDSkdKOsR0WLfbwBuVHa-1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="h9KeT2P2xpoq7i5WgNcR-1" target="h9KeT2P2xpoq7i5WgNcR-7">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="h9KeT2P2xpoq7i5WgNcR-1" value="&lt;div style=&quot;text-align: left;&quot;&gt;&lt;font face=&quot;Helvetica&quot;&gt;SuperLinter:&lt;font style=&quot;color: rgb(0, 0, 0);&quot;&gt;&lt;span style=&quot;background-color: transparent; color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));&quot;&gt;&lt;/span&gt;&lt;/font&gt;&lt;/font&gt;&lt;/div&gt;&lt;div&gt;&lt;ol&gt;&lt;li style=&quot;text-align: left;&quot;&gt;&lt;span style=&quot;box-sizing: border-box; margin-bottom: 0px; background-color: light-dark(#ffffff, var(--ge-dark-color, #121212));&quot;&gt;&lt;font style=&quot;color: rgb(0, 0, 0);&quot; face=&quot;Helvetica&quot;&gt;CHECKOV&lt;/font&gt;&lt;/span&gt;&lt;/li&gt;&lt;li style=&quot;text-align: left;&quot;&gt;&lt;span style=&quot;box-sizing: border-box; margin-bottom: 0px;&quot;&gt;&lt;span style=&quot;box-sizing: border-box; margin-bottom: 0px; background-color: light-dark(#ffffff, var(--ge-dark-color, #121212));&quot;&gt;&lt;font style=&quot;color: rgb(0, 0, 0);&quot; face=&quot;Helvetica&quot;&gt;FMT&lt;/font&gt;&lt;/span&gt;&lt;/span&gt;&lt;/li&gt;&lt;li style=&quot;text-align: left;&quot;&gt;&lt;span style=&quot;box-sizing: border-box; margin-bottom: 0px;&quot;&gt;&lt;span style=&quot;box-sizing: border-box; margin-bottom: 0px;&quot;&gt;&lt;span style=&quot;box-sizing: border-box; margin-bottom: 0px; background-color: light-dark(#ffffff, var(--ge-dark-color, #121212));&quot;&gt;&lt;font style=&quot;color: rgb(0, 0, 0);&quot; face=&quot;Helvetica&quot;&gt;TFLINT&lt;/font&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/li&gt;&lt;li style=&quot;text-align: left;&quot;&gt;&lt;span style=&quot;background-color: light-dark(#ffffff, var(--ge-dark-color, #121212));&quot;&gt;YAML&lt;/span&gt;&lt;/li&gt;&lt;li style=&quot;text-align: left;&quot;&gt;&lt;span style=&quot;box-sizing: border-box; margin-bottom: 0px;&quot;&gt;&lt;span style=&quot;box-sizing: border-box; margin-bottom: 0px;&quot;&gt;&lt;span style=&quot;box-sizing: border-box; margin-bottom: 0px;&quot;&gt;&lt;span style=&quot;box-sizing: border-box; margin-bottom: 0px;&quot;&gt;&lt;span style=&quot;box-sizing: border-box; margin-bottom: 0px;&quot;&gt;&lt;span style=&quot;box-sizing: border-box; margin-bottom: 0px; background-color: light-dark(#ffffff, var(--ge-dark-color, #121212));&quot;&gt;&lt;font style=&quot;color: rgb(0, 0, 0);&quot; face=&quot;Helvetica&quot;&gt;BASH&lt;/font&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/li&gt;&lt;li style=&quot;text-align: left;&quot;&gt;&lt;span style=&quot;box-sizing: border-box; margin-bottom: 0px;&quot;&gt;&lt;span style=&quot;box-sizing: border-box; margin-bottom: 0px;&quot;&gt;&lt;span style=&quot;box-sizing: border-box; margin-bottom: 0px;&quot;&gt;&lt;span style=&quot;box-sizing: border-box; margin-bottom: 0px;&quot;&gt;&lt;span style=&quot;box-sizing: border-box; margin-bottom: 0px;&quot;&gt;&lt;span style=&quot;box-sizing: border-box; margin-bottom: 0px;&quot;&gt;&lt;span style=&quot;box-sizing: border-box; margin-bottom: 0px; background-color: light-dark(#ffffff, var(--ge-dark-color, #121212));&quot;&gt;&lt;font style=&quot;color: rgb(0, 0, 0);&quot; face=&quot;Helvetica&quot;&gt;SHELL_SHFMT&lt;/font&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/li&gt;&lt;li style=&quot;text-align: left;&quot;&gt;&lt;span style=&quot;box-sizing: border-box; margin-bottom: 0px;&quot;&gt;&lt;span style=&quot;box-sizing: border-box; margin-bottom: 0px;&quot;&gt;&lt;span style=&quot;box-sizing: border-box; margin-bottom: 0px;&quot;&gt;&lt;span style=&quot;box-sizing: border-box; margin-bottom: 0px;&quot;&gt;&lt;span style=&quot;box-sizing: border-box; margin-bottom: 0px;&quot;&gt;&lt;span style=&quot;box-sizing: border-box; margin-bottom: 0px;&quot;&gt;&lt;span style=&quot;box-sizing: border-box; margin-bottom: 0px; background-color: light-dark(#ffffff, var(--ge-dark-color, #121212));&quot;&gt;&lt;font style=&quot;color: rgb(0, 0, 0);&quot; face=&quot;Helvetica&quot;&gt;JSON&lt;/font&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/li&gt;&lt;/ol&gt;&lt;/div&gt;" style="rounded=1;whiteSpace=wrap;html=1;shadow=1;glass=0;align=center;" parent="1" vertex="1">
+          <mxGeometry x="360" y="835.4399999999999" width="150" height="150" as="geometry" />
+        </mxCell>
+        <mxCell id="h9KeT2P2xpoq7i5WgNcR-9" value="" style="rounded=0;orthogonalLoop=1;jettySize=auto;html=1;sketch=1;curveFitting=1;jiggle=2;shadow=1;" parent="1" source="h9KeT2P2xpoq7i5WgNcR-7" target="3PkbmrK094pr91opABPB-92" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="h9KeT2P2xpoq7i5WgNcR-7" value="&lt;div style=&quot;&quot;&gt;Detect Changed Folders&lt;/div&gt;" style="rounded=1;whiteSpace=wrap;html=1;shadow=1;glass=0;align=center;" parent="1" vertex="1">
+          <mxGeometry x="559" y="891.9599999999999" width="160" height="36.95" as="geometry" />
+        </mxCell>
+        <mxCell id="h9KeT2P2xpoq7i5WgNcR-13" value="" style="endArrow=none;dashed=1;html=1;rounded=0;" parent="1" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="1359" y="1400" as="sourcePoint" />
+            <mxPoint x="1359" y="800" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="h9KeT2P2xpoq7i5WgNcR-16" value="" style="rounded=0;orthogonalLoop=1;jettySize=auto;html=1;shadow=1;sketch=1;curveFitting=1;jiggle=2;" parent="1" source="h9KeT2P2xpoq7i5WgNcR-14" target="h9KeT2P2xpoq7i5WgNcR-15" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="h9KeT2P2xpoq7i5WgNcR-14" value="&lt;div style=&quot;&quot;&gt;&lt;span style=&quot;font-size: 11px; background-color: rgb(240, 242, 242);&quot;&gt;Push&lt;br&gt;branch: main&lt;/span&gt;&lt;/div&gt;" style="image;aspect=fixed;html=1;points=[];align=center;fontSize=12;image=img/lib/azure2/general/Files.svg;shadow=1;" parent="1" vertex="1">
+          <mxGeometry x="1399" y="1080" width="60" height="65.63" as="geometry" />
+        </mxCell>
+        <mxCell id="h9KeT2P2xpoq7i5WgNcR-18" value="" style="rounded=0;orthogonalLoop=1;jettySize=auto;html=1;shadow=1;sketch=1;curveFitting=1;jiggle=2;" parent="1" source="h9KeT2P2xpoq7i5WgNcR-15" target="h9KeT2P2xpoq7i5WgNcR-17" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="h9KeT2P2xpoq7i5WgNcR-15" value="&lt;div style=&quot;&quot;&gt;Find Merged PR&lt;/div&gt;" style="rounded=1;whiteSpace=wrap;html=1;shadow=1;glass=0;align=center;" parent="1" vertex="1">
+          <mxGeometry x="1519" y="1096.73" width="110" height="32.18" as="geometry" />
+        </mxCell>
+        <mxCell id="h9KeT2P2xpoq7i5WgNcR-20" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;sketch=1;curveFitting=1;jiggle=2;shadow=1;" parent="1" source="h9KeT2P2xpoq7i5WgNcR-17" target="h9KeT2P2xpoq7i5WgNcR-19" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="h9KeT2P2xpoq7i5WgNcR-17" value="&lt;div style=&quot;&quot;&gt;Detect Changed Folders&lt;/div&gt;" style="rounded=1;whiteSpace=wrap;html=1;shadow=1;glass=0;align=center;" parent="1" vertex="1">
+          <mxGeometry x="1679" y="1096.73" width="160" height="36.95" as="geometry" />
+        </mxCell>
+        <mxCell id="h9KeT2P2xpoq7i5WgNcR-21" value="" style="rounded=0;orthogonalLoop=1;jettySize=auto;html=1;shadow=1;sketch=1;curveFitting=1;jiggle=2;" parent="1" source="h9KeT2P2xpoq7i5WgNcR-19" target="PlJ75UTxFvQ4tDJdA3ZF-14" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="h9KeT2P2xpoq7i5WgNcR-19" value="&lt;div style=&quot;&quot;&gt;Terraform Apply on each folder&lt;/div&gt;" style="rounded=1;whiteSpace=wrap;html=1;shadow=1;glass=0;align=center;" parent="1" vertex="1">
+          <mxGeometry x="1889" y="1093.57" width="170" height="43.27" as="geometry" />
+        </mxCell>
+        <mxCell id="vDSkdKOsR0WLfbwBuVHa-2" value="&lt;b&gt;WIP&lt;/b&gt;" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;" vertex="1" parent="1">
+          <mxGeometry x="2110" y="1010" width="60" height="30" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

@@ -1,0 +1,107 @@
+<mxfile host="Electron" agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) draw.io/24.7.17 Chrome/128.0.6613.36 Electron/32.0.1 Safari/537.36" version="24.7.17">
+  <diagram name="Page-1" id="fvRVHGS3rkYx4_wCLrew">
+    <mxGraphModel dx="1551" dy="800" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="3PkbmrK094pr91opABPB-93" style="rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0;entryY=0.5;entryDx=0;entryDy=0;shadow=1;sketch=1;curveFitting=1;jiggle=2;" parent="1" source="3PkbmrK094pr91opABPB-4" target="3PkbmrK094pr91opABPB-92" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="3PkbmrK094pr91opABPB-4" value="Lint - SuperLinter&lt;div&gt;&lt;br&gt;&lt;/div&gt;&lt;div&gt;Policy-as-Code - Checkov&amp;nbsp;&lt;/div&gt;" style="rounded=1;whiteSpace=wrap;html=1;shadow=1;glass=1;" parent="1" vertex="1">
+          <mxGeometry x="400" y="807.82" width="160" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="3PkbmrK094pr91opABPB-86" value="&lt;span style=&quot;font-family: &amp;quot;MesloLGS NF&amp;quot;, Monaco, &amp;quot;Courier New&amp;quot;, monospace, Menlo, Monaco, &amp;quot;Courier New&amp;quot;, monospace; font-size: 16px;&quot;&gt;CI/CD - Terraform Infrastructure - Non and Prod&lt;/span&gt;" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;" parent="1" vertex="1">
+          <mxGeometry x="40" y="730" width="480" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="3PkbmrK094pr91opABPB-90" style="rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0;entryY=0.5;entryDx=0;entryDy=0;sketch=1;curveFitting=1;jiggle=2;shadow=1;" parent="1" source="3PkbmrK094pr91opABPB-87" target="3PkbmrK094pr91opABPB-4" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="3PkbmrK094pr91opABPB-87" value="GHA&lt;br&gt;tf_cicd_{environment}.yaml" style="dashed=0;outlineConnect=0;html=1;align=center;labelPosition=center;verticalLabelPosition=bottom;verticalAlign=top;shape=mxgraph.webicons.github;gradientColor=#DFDEDE;aspect=fixed;shadow=1;" parent="1" vertex="1">
+          <mxGeometry x="252.97" y="812.8199999999999" width="64.06" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="3PkbmrK094pr91opABPB-89" style="rounded=0;orthogonalLoop=1;jettySize=auto;html=1;startArrow=classic;startFill=1;sketch=1;curveFitting=1;jiggle=2;shadow=1;" parent="1" source="3PkbmrK094pr91opABPB-88" target="3PkbmrK094pr91opABPB-87" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="BvMCWaTnpbiaOZuSAGn3-11" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;sketch=1;curveFitting=1;jiggle=2;shadow=1;" edge="1" parent="1" source="3PkbmrK094pr91opABPB-88" target="BvMCWaTnpbiaOZuSAGn3-3">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="180" y="841" />
+              <mxPoint x="180" y="1003" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="BvMCWaTnpbiaOZuSAGn3-12" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;sketch=1;curveFitting=1;jiggle=2;shadow=1;" edge="1" parent="1" source="3PkbmrK094pr91opABPB-88" target="BvMCWaTnpbiaOZuSAGn3-6">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="180" y="841" />
+              <mxPoint x="180" y="1163" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="3PkbmrK094pr91opABPB-88" value="&lt;div style=&quot;&quot;&gt;&lt;span style=&quot;font-size: 11px; background-color: rgb(240, 242, 242);&quot;&gt;Pull Request&lt;br&gt;branch: main&lt;/span&gt;&lt;/div&gt;&lt;div style=&quot;&quot;&gt;&lt;span style=&quot;font-size: 11px; background-color: rgb(240, 242, 242);&quot;&gt;paths: infra-{environment}&lt;/span&gt;&lt;/div&gt;" style="image;aspect=fixed;html=1;points=[];align=center;fontSize=12;image=img/lib/azure2/general/Files.svg;shadow=1;" parent="1" vertex="1">
+          <mxGeometry x="60" y="807.82" width="60" height="65.63" as="geometry" />
+        </mxCell>
+        <mxCell id="3PkbmrK094pr91opABPB-91" value="&lt;span style=&quot;font-family: &amp;quot;MesloLGS NF&amp;quot;, Monaco, &amp;quot;Courier New&amp;quot;, monospace, Menlo, Monaco, &amp;quot;Courier New&amp;quot;, monospace; font-size: 16px;&quot;&gt;CI&lt;/span&gt;" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;" parent="1" vertex="1">
+          <mxGeometry x="237.03" y="772.8199999999999" width="40" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="3PkbmrK094pr91opABPB-97" value="" style="rounded=0;orthogonalLoop=1;jettySize=auto;html=1;shadow=1;sketch=1;curveFitting=1;jiggle=2;" parent="1" source="3PkbmrK094pr91opABPB-92" target="3PkbmrK094pr91opABPB-94" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="3PkbmrK094pr91opABPB-92" value="Plan" style="rounded=1;whiteSpace=wrap;html=1;shadow=1;glass=1;" parent="1" vertex="1">
+          <mxGeometry x="600" y="807.82" width="80" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="3PkbmrK094pr91opABPB-98" value="" style="rounded=0;orthogonalLoop=1;jettySize=auto;html=1;sketch=1;curveFitting=1;jiggle=2;shadow=1;" parent="1" source="3PkbmrK094pr91opABPB-94" target="3PkbmrK094pr91opABPB-95" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="3PkbmrK094pr91opABPB-94" value="Cloud Infracost" style="rounded=1;whiteSpace=wrap;html=1;shadow=1;glass=1;" parent="1" vertex="1">
+          <mxGeometry x="720" y="807.82" width="120" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="3PkbmrK094pr91opABPB-99" value="" style="rounded=0;orthogonalLoop=1;jettySize=auto;html=1;sketch=1;curveFitting=1;jiggle=2;shadow=1;" parent="1" source="3PkbmrK094pr91opABPB-95" target="3PkbmrK094pr91opABPB-96" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="3PkbmrK094pr91opABPB-95" value="README.md File Update" style="rounded=1;whiteSpace=wrap;html=1;shadow=1;glass=1;" parent="1" vertex="1">
+          <mxGeometry x="880" y="807.82" width="160" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="BvMCWaTnpbiaOZuSAGn3-9" style="rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0;entryY=0.5;entryDx=0;entryDy=0;sketch=1;curveFitting=1;jiggle=2;shadow=1;" edge="1" parent="1" source="3PkbmrK094pr91opABPB-96" target="3PkbmrK094pr91opABPB-102">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="3PkbmrK094pr91opABPB-96" value="Deployment Help Message" style="rounded=1;whiteSpace=wrap;html=1;shadow=1;glass=1;" parent="1" vertex="1">
+          <mxGeometry x="1081" y="807.82" width="160" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="3PkbmrK094pr91opABPB-100" value="&lt;span style=&quot;font-family: &amp;quot;MesloLGS NF&amp;quot;, Monaco, &amp;quot;Courier New&amp;quot;, monospace, Menlo, Monaco, &amp;quot;Courier New&amp;quot;, monospace; font-size: 16px;&quot;&gt;CD&lt;/span&gt;" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;" parent="1" vertex="1">
+          <mxGeometry x="1480" y="772.82" width="40" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="BvMCWaTnpbiaOZuSAGn3-10" style="rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0;entryY=0.5;entryDx=0;entryDy=0;sketch=1;curveFitting=1;jiggle=2;shadow=1;" edge="1" parent="1" source="3PkbmrK094pr91opABPB-102" target="3PkbmrK094pr91opABPB-104">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="3PkbmrK094pr91opABPB-102" value="infra-&lt;span style=&quot;text-wrap: nowrap;&quot;&gt;{environment}&lt;/span&gt;_apply" style="text;html=1;strokeColor=#d6b656;fillColor=#fff2cc;align=center;verticalAlign=middle;whiteSpace=wrap;overflow=hidden;" parent="1" vertex="1">
+          <mxGeometry x="1280" y="832.82" width="200" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="3PkbmrK094pr91opABPB-103" value="Labelling method to CD" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;" parent="1" vertex="1">
+          <mxGeometry x="1305" y="802.82" width="150" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="3PkbmrK094pr91opABPB-104" value="Apply" style="rounded=1;whiteSpace=wrap;html=1;shadow=1;glass=1;" parent="1" vertex="1">
+          <mxGeometry x="1520" y="807.8199999999999" width="80" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="BvMCWaTnpbiaOZuSAGn3-1" value="Jira Ticket on Pull Request" style="rounded=1;whiteSpace=wrap;html=1;shadow=1;glass=1;" vertex="1" parent="1">
+          <mxGeometry x="398.97" y="960" width="160" height="85" as="geometry" />
+        </mxCell>
+        <mxCell id="BvMCWaTnpbiaOZuSAGn3-2" style="rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0;entryY=0.5;entryDx=0;entryDy=0;sketch=1;curveFitting=1;jiggle=2;shadow=1;" edge="1" parent="1" source="BvMCWaTnpbiaOZuSAGn3-3" target="BvMCWaTnpbiaOZuSAGn3-1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="BvMCWaTnpbiaOZuSAGn3-3" value="GHA&lt;br&gt;jira_on_pr.yaml" style="dashed=0;outlineConnect=0;html=1;align=center;labelPosition=center;verticalLabelPosition=bottom;verticalAlign=top;shape=mxgraph.webicons.github;gradientColor=#DFDEDE;aspect=fixed;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="252.97" y="972.5" width="64.06" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="BvMCWaTnpbiaOZuSAGn3-4" value="Conventional Commit Message Check" style="rounded=1;whiteSpace=wrap;html=1;shadow=1;glass=1;" vertex="1" parent="1">
+          <mxGeometry x="398.97" y="1120" width="160" height="85" as="geometry" />
+        </mxCell>
+        <mxCell id="BvMCWaTnpbiaOZuSAGn3-5" style="rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0;entryY=0.5;entryDx=0;entryDy=0;sketch=1;curveFitting=1;jiggle=2;shadow=1;" edge="1" parent="1" source="BvMCWaTnpbiaOZuSAGn3-6" target="BvMCWaTnpbiaOZuSAGn3-4">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="BvMCWaTnpbiaOZuSAGn3-6" value="GHA&lt;br&gt;commit-check.yaml" style="dashed=0;outlineConnect=0;html=1;align=center;labelPosition=center;verticalLabelPosition=bottom;verticalAlign=top;shape=mxgraph.webicons.github;gradientColor=#DFDEDE;aspect=fixed;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="252.97" y="1132.5" width="64.06" height="60" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
