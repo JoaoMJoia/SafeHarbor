@@ -1,0 +1,29 @@
+version: '3.8'
+
+services:
+  demo-app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: safeharbor/demo-app:latest
+    container_name: demo-app
+    ports:
+      - "8080:8080"
+    environment:
+      - APP_MESSAGE=Welcome to SafeHarbor Demo App!
+      - APP_VERSION=v1.0.0
+      - ENVIRONMENT=development
+      - PORT=8080
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:8080/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
+    networks:
+      - demo-network
+
+networks:
+  demo-network:
+    driver: bridge
