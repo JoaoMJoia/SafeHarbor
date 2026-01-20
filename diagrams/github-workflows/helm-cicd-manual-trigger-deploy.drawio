@@ -1,145 +1,140 @@
-<mxfile host="Electron" agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) draw.io/25.0.2 Chrome/128.0.6613.186 Electron/32.2.5 Safari/537.36" version="25.0.2">
+<mxfile host="Electron" agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) draw.io/29.3.0 Chrome/140.0.7339.249 Electron/38.7.2 Safari/537.36" version="29.3.0">
   <diagram name="Page-1" id="fvRVHGS3rkYx4_wCLrew">
-    <mxGraphModel dx="2388" dy="811" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0">
+    <mxGraphModel dx="2893" dy="1219" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0">
       <root>
         <mxCell id="0" />
         <mxCell id="1" parent="0" />
-        <mxCell id="3PkbmrK094pr91opABPB-4" value="&lt;div&gt;K8S and HELM&lt;/div&gt;" style="rounded=1;whiteSpace=wrap;html=1;shadow=1;glass=1;" parent="1" vertex="1">
-          <mxGeometry x="320" y="960" width="160" height="85" as="geometry" />
-        </mxCell>
-        <mxCell id="3PkbmrK094pr91opABPB-86" value="&lt;span style=&quot;font-family: &amp;quot;MesloLGS NF&amp;quot;, Monaco, &amp;quot;Courier New&amp;quot;, monospace, Menlo, Monaco, &amp;quot;Courier New&amp;quot;, monospace; font-size: 16px;&quot;&gt;CI/CD - Helm Charts - Non and Prod&lt;/span&gt;" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;" parent="1" vertex="1">
-          <mxGeometry x="-120" y="890" width="350" height="30" as="geometry" />
-        </mxCell>
-        <mxCell id="3PkbmrK094pr91opABPB-90" style="rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0;entryY=0.5;entryDx=0;entryDy=0;sketch=1;curveFitting=1;jiggle=2;shadow=1;" parent="1" source="3PkbmrK094pr91opABPB-87" target="3PkbmrK094pr91opABPB-4" edge="1">
+        <mxCell id="5pjzDFmp6rwPb6VIA61V-6" edge="1" parent="1" source="3PkbmrK094pr91opABPB-4" style="rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0;entryY=0.5;entryDx=0;entryDy=0;shadow=1;sketch=1;curveFitting=1;jiggle=2;exitX=1;exitY=0.5;exitDx=0;exitDy=0;" target="5pjzDFmp6rwPb6VIA61V-4">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="3PkbmrK094pr91opABPB-87" value="GHA&lt;br&gt;helm_ci_non-prod.yaml" style="dashed=0;outlineConnect=0;html=1;align=center;labelPosition=center;verticalLabelPosition=bottom;verticalAlign=top;shape=mxgraph.webicons.github;gradientColor=#DFDEDE;aspect=fixed;shadow=1;" parent="1" vertex="1">
-          <mxGeometry x="160" y="975" width="64.06" height="60" as="geometry" />
+        <mxCell id="3PkbmrK094pr91opABPB-4" parent="1" style="rounded=1;whiteSpace=wrap;html=1;shadow=1;glass=1;" value="&lt;div&gt;K8S and HELM&lt;/div&gt;" vertex="1">
+          <mxGeometry height="85" width="160" x="320" y="1040" as="geometry" />
         </mxCell>
-        <mxCell id="3PkbmrK094pr91opABPB-89" style="rounded=0;orthogonalLoop=1;jettySize=auto;html=1;startArrow=none;startFill=0;sketch=1;curveFitting=1;jiggle=2;shadow=1;edgeStyle=orthogonalEdgeStyle;" parent="1" source="3PkbmrK094pr91opABPB-88" target="3PkbmrK094pr91opABPB-87" edge="1">
+        <mxCell id="3PkbmrK094pr91opABPB-86" parent="1" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;" value="&lt;span style=&quot;font-family: &amp;quot;MesloLGS NF&amp;quot;, Monaco, &amp;quot;Courier New&amp;quot;, monospace, Menlo, Monaco, &amp;quot;Courier New&amp;quot;, monospace; font-size: 16px;&quot;&gt;CI/CD - Helm Charts - Non and Prod&lt;/span&gt;" vertex="1">
+          <mxGeometry height="30" width="350" x="-120" y="970" as="geometry" />
+        </mxCell>
+        <mxCell id="3PkbmrK094pr91opABPB-90" edge="1" parent="1" source="3PkbmrK094pr91opABPB-87" style="rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0;entryY=0.5;entryDx=0;entryDy=0;sketch=1;curveFitting=1;jiggle=2;shadow=1;" target="3PkbmrK094pr91opABPB-4">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="3PkbmrK094pr91opABPB-87" parent="1" style="dashed=0;outlineConnect=0;html=1;align=center;labelPosition=center;verticalLabelPosition=bottom;verticalAlign=top;shape=mxgraph.webicons.github;gradientColor=#DFDEDE;aspect=fixed;shadow=1;" value="GHA&lt;br&gt;helm_ci_non-prod.yaml" vertex="1">
+          <mxGeometry height="60" width="64.06" x="160" y="1055" as="geometry" />
+        </mxCell>
+        <mxCell id="3PkbmrK094pr91opABPB-89" edge="1" parent="1" source="3PkbmrK094pr91opABPB-88" style="rounded=0;orthogonalLoop=1;jettySize=auto;html=1;startArrow=none;startFill=0;sketch=1;curveFitting=1;jiggle=2;shadow=1;edgeStyle=orthogonalEdgeStyle;" target="3PkbmrK094pr91opABPB-87">
           <mxGeometry relative="1" as="geometry">
             <Array as="points">
               <mxPoint x="80" y="1398" />
-              <mxPoint x="80" y="1000" />
+              <mxPoint x="80" y="1080" />
             </Array>
           </mxGeometry>
         </mxCell>
-        <mxCell id="aj-A_OMatylE9nxC6UCo-6" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;sketch=1;curveFitting=1;jiggle=2;shadow=1;" parent="1" source="3PkbmrK094pr91opABPB-88" target="aj-A_OMatylE9nxC6UCo-3" edge="1">
+        <mxCell id="aj-A_OMatylE9nxC6UCo-6" edge="1" parent="1" source="3PkbmrK094pr91opABPB-88" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;sketch=1;curveFitting=1;jiggle=2;shadow=1;" target="aj-A_OMatylE9nxC6UCo-3">
           <mxGeometry relative="1" as="geometry">
             <Array as="points">
               <mxPoint x="80" y="1400" />
-              <mxPoint x="80" y="1160" />
+              <mxPoint x="80" y="1240" />
             </Array>
           </mxGeometry>
         </mxCell>
-        <mxCell id="aj-A_OMatylE9nxC6UCo-26" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;sketch=1;curveFitting=1;jiggle=2;shadow=1;" parent="1" source="3PkbmrK094pr91opABPB-88" target="aj-A_OMatylE9nxC6UCo-19" edge="1">
+        <mxCell id="aj-A_OMatylE9nxC6UCo-26" edge="1" parent="1" source="3PkbmrK094pr91opABPB-88" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;sketch=1;curveFitting=1;jiggle=2;shadow=1;exitX=0.967;exitY=0.564;exitDx=0;exitDy=0;exitPerimeter=0;" target="aj-A_OMatylE9nxC6UCo-19">
           <mxGeometry relative="1" as="geometry">
-            <mxPoint x="80" y="1360" as="targetPoint" />
             <Array as="points">
-              <mxPoint x="80" y="1400" />
-              <mxPoint x="80" y="1643" />
+              <mxPoint x="-52" y="1398" />
+              <mxPoint x="80" y="1398" />
+              <mxPoint x="80" y="1563" />
             </Array>
+            <mxPoint x="-50" y="1320" as="sourcePoint" />
+            <mxPoint x="-80" y="1563" as="targetPoint" />
           </mxGeometry>
         </mxCell>
-        <mxCell id="aj-A_OMatylE9nxC6UCo-27" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;sketch=1;curveFitting=1;jiggle=2;shadow=1;" parent="1" source="3PkbmrK094pr91opABPB-88" target="aj-A_OMatylE9nxC6UCo-23" edge="1">
+        <mxCell id="aj-A_OMatylE9nxC6UCo-27" edge="1" parent="1" source="3PkbmrK094pr91opABPB-88" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;sketch=1;curveFitting=1;jiggle=2;shadow=1;" target="aj-A_OMatylE9nxC6UCo-23">
           <mxGeometry relative="1" as="geometry">
-            <mxPoint x="80" y="1480" as="targetPoint" />
             <Array as="points">
               <mxPoint x="81" y="1400" />
-              <mxPoint x="81" y="1800" />
+              <mxPoint x="81" y="1720" />
             </Array>
+            <mxPoint x="80" y="1480" as="targetPoint" />
           </mxGeometry>
         </mxCell>
-        <mxCell id="LetxpRIEdBVR2k5mY3gD-9" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;sketch=1;curveFitting=1;jiggle=2;shadow=1;" edge="1" parent="1" source="3PkbmrK094pr91opABPB-88" target="LetxpRIEdBVR2k5mY3gD-4">
+        <mxCell id="LetxpRIEdBVR2k5mY3gD-9" edge="1" parent="1" source="3PkbmrK094pr91opABPB-88" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;sketch=1;curveFitting=1;jiggle=2;shadow=1;" target="LetxpRIEdBVR2k5mY3gD-4">
           <mxGeometry relative="1" as="geometry">
             <Array as="points">
               <mxPoint x="80" y="1398" />
-              <mxPoint x="80" y="1325" />
-            </Array>
-          </mxGeometry>
-        </mxCell>
-        <mxCell id="LetxpRIEdBVR2k5mY3gD-10" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;sketch=1;curveFitting=1;jiggle=2;shadow=1;" edge="1" parent="1" source="3PkbmrK094pr91opABPB-88" target="LetxpRIEdBVR2k5mY3gD-8">
-          <mxGeometry relative="1" as="geometry">
-            <Array as="points">
               <mxPoint x="80" y="1400" />
-              <mxPoint x="80" y="1483" />
+              <mxPoint x="192" y="1400" />
             </Array>
           </mxGeometry>
         </mxCell>
-        <mxCell id="3PkbmrK094pr91opABPB-88" value="&lt;div style=&quot;&quot;&gt;&lt;span style=&quot;font-size: 11px; background-color: rgb(240, 242, 242);&quot;&gt;Pull Request&lt;br&gt;branch: main&lt;/span&gt;&lt;/div&gt;&lt;div style=&quot;&quot;&gt;&lt;span style=&quot;font-size: 11px; background-color: rgb(240, 242, 242);&quot;&gt;paths: helm-common&lt;/span&gt;&lt;/div&gt;" style="image;aspect=fixed;html=1;points=[];align=center;fontSize=12;image=img/lib/azure2/general/Files.svg;shadow=1;" parent="1" vertex="1">
-          <mxGeometry x="-110" y="1365" width="60" height="65.63" as="geometry" />
+        <mxCell id="3PkbmrK094pr91opABPB-88" parent="1" style="image;aspect=fixed;html=1;points=[];align=center;fontSize=12;image=img/lib/azure2/general/Files.svg;shadow=1;" value="&lt;div style=&quot;&quot;&gt;&lt;span style=&quot;font-size: 11px; background-color: rgb(240, 242, 242);&quot;&gt;Pull Request&lt;br&gt;branch: main&lt;/span&gt;&lt;/div&gt;&lt;div style=&quot;&quot;&gt;&lt;span style=&quot;font-size: 11px; background-color: rgb(240, 242, 242);&quot;&gt;paths: helm-common&lt;/span&gt;&lt;/div&gt;" vertex="1">
+          <mxGeometry height="65.63" width="60" x="-110" y="1365" as="geometry" />
         </mxCell>
-        <mxCell id="aj-A_OMatylE9nxC6UCo-1" value="&lt;div&gt;K8S and HELM&lt;/div&gt;" style="rounded=1;whiteSpace=wrap;html=1;shadow=1;glass=1;" parent="1" vertex="1">
-          <mxGeometry x="320" y="1117.5" width="160" height="85" as="geometry" />
-        </mxCell>
-        <mxCell id="aj-A_OMatylE9nxC6UCo-2" style="rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0;entryY=0.5;entryDx=0;entryDy=0;sketch=1;curveFitting=1;jiggle=2;shadow=1;" parent="1" source="aj-A_OMatylE9nxC6UCo-3" target="aj-A_OMatylE9nxC6UCo-1" edge="1">
+        <mxCell id="5pjzDFmp6rwPb6VIA61V-5" edge="1" parent="1" source="aj-A_OMatylE9nxC6UCo-1" style="rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0;entryY=0.5;entryDx=0;entryDy=0;shadow=1;sketch=1;curveFitting=1;jiggle=2;exitX=1;exitY=0.5;exitDx=0;exitDy=0;" target="5pjzDFmp6rwPb6VIA61V-4">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="aj-A_OMatylE9nxC6UCo-3" value="GHA&lt;br&gt;helm_ci_prod.yaml" style="dashed=0;outlineConnect=0;html=1;align=center;labelPosition=center;verticalLabelPosition=bottom;verticalAlign=top;shape=mxgraph.webicons.github;gradientColor=#DFDEDE;aspect=fixed;shadow=1;" parent="1" vertex="1">
-          <mxGeometry x="160.00000000000003" y="1130" width="64.06" height="60" as="geometry" />
+        <mxCell id="aj-A_OMatylE9nxC6UCo-1" parent="1" style="rounded=1;whiteSpace=wrap;html=1;shadow=1;glass=1;" value="&lt;div&gt;K8S and HELM&lt;/div&gt;" vertex="1">
+          <mxGeometry height="85" width="160" x="320" y="1197.5" as="geometry" />
         </mxCell>
-        <mxCell id="aj-A_OMatylE9nxC6UCo-7" value="&lt;span style=&quot;font-family: &amp;quot;MesloLGS NF&amp;quot;, Monaco, &amp;quot;Courier New&amp;quot;, monospace, Menlo, Monaco, &amp;quot;Courier New&amp;quot;, monospace; font-size: 16px;&quot;&gt;CI&lt;/span&gt;" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;" parent="1" vertex="1">
-          <mxGeometry x="80" y="960" width="40" height="30" as="geometry" />
-        </mxCell>
-        <mxCell id="aj-A_OMatylE9nxC6UCo-8" value="&lt;span style=&quot;font-family: &amp;quot;MesloLGS NF&amp;quot;, Monaco, &amp;quot;Courier New&amp;quot;, monospace, Menlo, Monaco, &amp;quot;Courier New&amp;quot;, monospace; font-size: 16px;&quot;&gt;CD&lt;/span&gt;" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;" parent="1" vertex="1">
-          <mxGeometry x="80" y="1920" width="40" height="30" as="geometry" />
-        </mxCell>
-        <mxCell id="aj-A_OMatylE9nxC6UCo-14" value="" style="rounded=0;orthogonalLoop=1;jettySize=auto;html=1;shadow=1;sketch=1;curveFitting=1;jiggle=2;" parent="1" source="aj-A_OMatylE9nxC6UCo-10" target="aj-A_OMatylE9nxC6UCo-12" edge="1">
+        <mxCell id="aj-A_OMatylE9nxC6UCo-2" edge="1" parent="1" source="aj-A_OMatylE9nxC6UCo-3" style="rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0;entryY=0.5;entryDx=0;entryDy=0;sketch=1;curveFitting=1;jiggle=2;shadow=1;" target="aj-A_OMatylE9nxC6UCo-1">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="aj-A_OMatylE9nxC6UCo-10" value="GHA&lt;br&gt;helm_cd_non-prod.yaml" style="dashed=0;outlineConnect=0;html=1;align=center;labelPosition=center;verticalLabelPosition=bottom;verticalAlign=top;shape=mxgraph.webicons.github;gradientColor=#DFDEDE;aspect=fixed;shadow=1;" parent="1" vertex="1">
-          <mxGeometry x="120" y="1999" width="64.06" height="60" as="geometry" />
+        <mxCell id="aj-A_OMatylE9nxC6UCo-3" parent="1" style="dashed=0;outlineConnect=0;html=1;align=center;labelPosition=center;verticalLabelPosition=bottom;verticalAlign=top;shape=mxgraph.webicons.github;gradientColor=#DFDEDE;aspect=fixed;shadow=1;" value="GHA&lt;br&gt;helm_ci_prod.yaml" vertex="1">
+          <mxGeometry height="60" width="64.06" x="160.00000000000003" y="1210" as="geometry" />
         </mxCell>
-        <mxCell id="aj-A_OMatylE9nxC6UCo-15" value="" style="rounded=0;orthogonalLoop=1;jettySize=auto;html=1;sketch=1;curveFitting=1;jiggle=2;shadow=1;" parent="1" source="aj-A_OMatylE9nxC6UCo-11" target="aj-A_OMatylE9nxC6UCo-13" edge="1">
+        <mxCell id="aj-A_OMatylE9nxC6UCo-7" parent="1" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;" value="&lt;span style=&quot;font-family: &amp;quot;MesloLGS NF&amp;quot;, Monaco, &amp;quot;Courier New&amp;quot;, monospace, Menlo, Monaco, &amp;quot;Courier New&amp;quot;, monospace; font-size: 16px;&quot;&gt;CI&lt;/span&gt;" vertex="1">
+          <mxGeometry height="30" width="40" x="80" y="1040" as="geometry" />
+        </mxCell>
+        <mxCell id="aj-A_OMatylE9nxC6UCo-8" parent="1" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;" value="&lt;span style=&quot;font-family: &amp;quot;MesloLGS NF&amp;quot;, Monaco, &amp;quot;Courier New&amp;quot;, monospace, Menlo, Monaco, &amp;quot;Courier New&amp;quot;, monospace; font-size: 16px;&quot;&gt;CD&lt;/span&gt;" vertex="1">
+          <mxGeometry height="30" width="40" x="80" y="1840" as="geometry" />
+        </mxCell>
+        <mxCell id="aj-A_OMatylE9nxC6UCo-14" edge="1" parent="1" source="aj-A_OMatylE9nxC6UCo-10" style="rounded=0;orthogonalLoop=1;jettySize=auto;html=1;shadow=1;sketch=1;curveFitting=1;jiggle=2;" target="aj-A_OMatylE9nxC6UCo-12" value="">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="aj-A_OMatylE9nxC6UCo-11" value="GHA&lt;br&gt;helm_cd_prod.yaml" style="dashed=0;outlineConnect=0;html=1;align=center;labelPosition=center;verticalLabelPosition=bottom;verticalAlign=top;shape=mxgraph.webicons.github;gradientColor=#DFDEDE;aspect=fixed;shadow=1;" parent="1" vertex="1">
-          <mxGeometry x="120.00000000000003" y="2159" width="64.06" height="60" as="geometry" />
+        <mxCell id="aj-A_OMatylE9nxC6UCo-10" parent="1" style="dashed=0;outlineConnect=0;html=1;align=center;labelPosition=center;verticalLabelPosition=bottom;verticalAlign=top;shape=mxgraph.webicons.github;gradientColor=#DFDEDE;aspect=fixed;shadow=1;" value="GHA&lt;br&gt;helm_cd_non-prod.yaml" vertex="1">
+          <mxGeometry height="60" width="64.06" x="120" y="1919" as="geometry" />
         </mxCell>
-        <mxCell id="aj-A_OMatylE9nxC6UCo-12" value="Deploy" style="rounded=1;whiteSpace=wrap;html=1;shadow=1;glass=1;" parent="1" vertex="1">
-          <mxGeometry x="280" y="1989" width="80" height="80" as="geometry" />
-        </mxCell>
-        <mxCell id="aj-A_OMatylE9nxC6UCo-13" value="Deploy" style="rounded=1;whiteSpace=wrap;html=1;shadow=1;glass=1;" parent="1" vertex="1">
-          <mxGeometry x="280" y="2149" width="80" height="80" as="geometry" />
-        </mxCell>
-        <mxCell id="aj-A_OMatylE9nxC6UCo-17" value="Jira Ticket on Pull Request" style="rounded=1;whiteSpace=wrap;html=1;shadow=1;glass=1;" parent="1" vertex="1">
-          <mxGeometry x="320" y="1600" width="160" height="85" as="geometry" />
-        </mxCell>
-        <mxCell id="aj-A_OMatylE9nxC6UCo-18" style="rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0;entryY=0.5;entryDx=0;entryDy=0;sketch=1;curveFitting=1;jiggle=2;shadow=1;" parent="1" source="aj-A_OMatylE9nxC6UCo-19" target="aj-A_OMatylE9nxC6UCo-17" edge="1">
+        <mxCell id="aj-A_OMatylE9nxC6UCo-15" edge="1" parent="1" source="aj-A_OMatylE9nxC6UCo-11" style="rounded=0;orthogonalLoop=1;jettySize=auto;html=1;sketch=1;curveFitting=1;jiggle=2;shadow=1;" target="aj-A_OMatylE9nxC6UCo-13" value="">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="aj-A_OMatylE9nxC6UCo-19" value="GHA&lt;br&gt;jira_on_pr.yaml" style="dashed=0;outlineConnect=0;html=1;align=center;labelPosition=center;verticalLabelPosition=bottom;verticalAlign=top;shape=mxgraph.webicons.github;gradientColor=#DFDEDE;aspect=fixed;shadow=1;" parent="1" vertex="1">
-          <mxGeometry x="160.00000000000003" y="1612.5" width="64.06" height="60" as="geometry" />
+        <mxCell id="aj-A_OMatylE9nxC6UCo-11" parent="1" style="dashed=0;outlineConnect=0;html=1;align=center;labelPosition=center;verticalLabelPosition=bottom;verticalAlign=top;shape=mxgraph.webicons.github;gradientColor=#DFDEDE;aspect=fixed;shadow=1;" value="GHA&lt;br&gt;helm_cd_prod.yaml" vertex="1">
+          <mxGeometry height="60" width="64.06" x="120.00000000000003" y="2079" as="geometry" />
         </mxCell>
-        <mxCell id="aj-A_OMatylE9nxC6UCo-21" value="Conventional Commit Message Check" style="rounded=1;whiteSpace=wrap;html=1;shadow=1;glass=1;" parent="1" vertex="1">
-          <mxGeometry x="320" y="1760" width="160" height="85" as="geometry" />
+        <mxCell id="aj-A_OMatylE9nxC6UCo-12" parent="1" style="rounded=1;whiteSpace=wrap;html=1;shadow=1;glass=1;" value="Deploy" vertex="1">
+          <mxGeometry height="80" width="80" x="280" y="1909" as="geometry" />
         </mxCell>
-        <mxCell id="aj-A_OMatylE9nxC6UCo-22" style="rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0;entryY=0.5;entryDx=0;entryDy=0;sketch=1;curveFitting=1;jiggle=2;shadow=1;" parent="1" source="aj-A_OMatylE9nxC6UCo-23" target="aj-A_OMatylE9nxC6UCo-21" edge="1">
+        <mxCell id="aj-A_OMatylE9nxC6UCo-13" parent="1" style="rounded=1;whiteSpace=wrap;html=1;shadow=1;glass=1;" value="Deploy" vertex="1">
+          <mxGeometry height="80" width="80" x="280" y="2069" as="geometry" />
+        </mxCell>
+        <mxCell id="aj-A_OMatylE9nxC6UCo-17" parent="1" style="rounded=1;whiteSpace=wrap;html=1;shadow=1;glass=1;" value="Jira Ticket on Pull Request" vertex="1">
+          <mxGeometry height="85" width="160" x="320" y="1520" as="geometry" />
+        </mxCell>
+        <mxCell id="aj-A_OMatylE9nxC6UCo-18" edge="1" parent="1" source="aj-A_OMatylE9nxC6UCo-19" style="rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0;entryY=0.5;entryDx=0;entryDy=0;sketch=1;curveFitting=1;jiggle=2;shadow=1;" target="aj-A_OMatylE9nxC6UCo-17">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="aj-A_OMatylE9nxC6UCo-23" value="GHA&lt;br&gt;commit-check.yaml" style="dashed=0;outlineConnect=0;html=1;align=center;labelPosition=center;verticalLabelPosition=bottom;verticalAlign=top;shape=mxgraph.webicons.github;gradientColor=#DFDEDE;aspect=fixed;shadow=1;" parent="1" vertex="1">
-          <mxGeometry x="160.00000000000003" y="1772.5" width="64.06" height="60" as="geometry" />
+        <mxCell id="aj-A_OMatylE9nxC6UCo-19" parent="1" style="dashed=0;outlineConnect=0;html=1;align=center;labelPosition=center;verticalLabelPosition=bottom;verticalAlign=top;shape=mxgraph.webicons.github;gradientColor=#DFDEDE;aspect=fixed;shadow=1;" value="GHA&lt;br&gt;jira_on_pr.yaml" vertex="1">
+          <mxGeometry height="60" width="64.06" x="160.00000000000003" y="1532.5" as="geometry" />
         </mxCell>
-        <mxCell id="LetxpRIEdBVR2k5mY3gD-1" value="Manual Trigger" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;" vertex="1" parent="1">
-          <mxGeometry x="80" y="1950" width="100" height="30" as="geometry" />
+        <mxCell id="aj-A_OMatylE9nxC6UCo-21" parent="1" style="rounded=1;whiteSpace=wrap;html=1;shadow=1;glass=1;" value="Conventional Commit Message Check" vertex="1">
+          <mxGeometry height="85" width="160" x="320" y="1680" as="geometry" />
         </mxCell>
-        <mxCell id="LetxpRIEdBVR2k5mY3gD-2" value="Lint - SuperLinter" style="rounded=1;whiteSpace=wrap;html=1;shadow=1;glass=1;" vertex="1" parent="1">
-          <mxGeometry x="320" y="1280" width="160" height="85" as="geometry" />
-        </mxCell>
-        <mxCell id="LetxpRIEdBVR2k5mY3gD-3" style="rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0;entryY=0.5;entryDx=0;entryDy=0;sketch=1;curveFitting=1;jiggle=2;shadow=1;" edge="1" parent="1" source="LetxpRIEdBVR2k5mY3gD-4" target="LetxpRIEdBVR2k5mY3gD-2">
+        <mxCell id="aj-A_OMatylE9nxC6UCo-22" edge="1" parent="1" source="aj-A_OMatylE9nxC6UCo-23" style="rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0;entryY=0.5;entryDx=0;entryDy=0;sketch=1;curveFitting=1;jiggle=2;shadow=1;" target="aj-A_OMatylE9nxC6UCo-21">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="LetxpRIEdBVR2k5mY3gD-4" value="GHA&lt;br&gt;helm_ci_lint.yaml" style="dashed=0;outlineConnect=0;html=1;align=center;labelPosition=center;verticalLabelPosition=bottom;verticalAlign=top;shape=mxgraph.webicons.github;gradientColor=#DFDEDE;aspect=fixed;shadow=1;" vertex="1" parent="1">
-          <mxGeometry x="160.00000000000003" y="1292.5" width="64.06" height="60" as="geometry" />
+        <mxCell id="aj-A_OMatylE9nxC6UCo-23" parent="1" style="dashed=0;outlineConnect=0;html=1;align=center;labelPosition=center;verticalLabelPosition=bottom;verticalAlign=top;shape=mxgraph.webicons.github;gradientColor=#DFDEDE;aspect=fixed;shadow=1;" value="GHA&lt;br&gt;commit-check.yaml" vertex="1">
+          <mxGeometry height="60" width="64.06" x="160.00000000000003" y="1692.5" as="geometry" />
         </mxCell>
-        <mxCell id="LetxpRIEdBVR2k5mY3gD-6" value="Policy-as-Code - Checkov" style="rounded=1;whiteSpace=wrap;html=1;shadow=1;glass=1;" vertex="1" parent="1">
-          <mxGeometry x="320" y="1440" width="160" height="85" as="geometry" />
+        <mxCell id="LetxpRIEdBVR2k5mY3gD-1" parent="1" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;" value="Manual Trigger" vertex="1">
+          <mxGeometry height="30" width="100" x="80" y="1870" as="geometry" />
         </mxCell>
-        <mxCell id="LetxpRIEdBVR2k5mY3gD-7" style="rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0;entryY=0.5;entryDx=0;entryDy=0;sketch=1;curveFitting=1;jiggle=2;shadow=1;" edge="1" parent="1" source="LetxpRIEdBVR2k5mY3gD-8" target="LetxpRIEdBVR2k5mY3gD-6">
+        <mxCell id="LetxpRIEdBVR2k5mY3gD-2" parent="1" style="rounded=1;whiteSpace=wrap;html=1;shadow=1;glass=1;align=center;" value="Lint - SuperLinter&lt;div&gt;&lt;ol&gt;&lt;li&gt;Helm&lt;/li&gt;&lt;li&gt;Kubernetes&lt;/li&gt;&lt;li&gt;Checkov&lt;/li&gt;&lt;/ol&gt;&lt;/div&gt;" vertex="1">
+          <mxGeometry height="85" width="160" x="320" y="1355.32" as="geometry" />
+        </mxCell>
+        <mxCell id="LetxpRIEdBVR2k5mY3gD-3" edge="1" parent="1" source="LetxpRIEdBVR2k5mY3gD-4" style="rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0;entryY=0.5;entryDx=0;entryDy=0;sketch=1;curveFitting=1;jiggle=2;shadow=1;" target="LetxpRIEdBVR2k5mY3gD-2">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="LetxpRIEdBVR2k5mY3gD-8" value="GHA&lt;br&gt;helm_ci_checkov.yaml" style="dashed=0;outlineConnect=0;html=1;align=center;labelPosition=center;verticalLabelPosition=bottom;verticalAlign=top;shape=mxgraph.webicons.github;gradientColor=#DFDEDE;aspect=fixed;shadow=1;" vertex="1" parent="1">
-          <mxGeometry x="160.00000000000003" y="1452.5" width="64.06" height="60" as="geometry" />
+        <mxCell id="LetxpRIEdBVR2k5mY3gD-4" parent="1" style="dashed=0;outlineConnect=0;html=1;align=center;labelPosition=center;verticalLabelPosition=bottom;verticalAlign=top;shape=mxgraph.webicons.github;gradientColor=#DFDEDE;aspect=fixed;shadow=1;" value="GHA&lt;br&gt;helm_ci_lint.yaml" vertex="1">
+          <mxGeometry height="60" width="64.06" x="160.00000000000003" y="1367.82" as="geometry" />
+        </mxCell>
+        <mxCell id="5pjzDFmp6rwPb6VIA61V-4" parent="1" style="rounded=1;whiteSpace=wrap;html=1;shadow=1;glass=1;align=left;" value="&lt;ol&gt;&lt;li&gt;&lt;div style=&quot;line-height: 24px; white-space: pre;&quot;&gt;&lt;span style=&quot;background-color: light-dark(#ffffff, var(--ge-dark-color, #121212));&quot;&gt;&lt;font face=&quot;Helvetica&quot; style=&quot;color: rgb(0, 0, 0);&quot;&gt;Checkout repository code&lt;/font&gt;&lt;/span&gt;&lt;/div&gt;&lt;/li&gt;&lt;li&gt;&lt;div style=&quot;line-height: 24px; white-space: pre;&quot;&gt;&lt;span style=&quot;background-color: light-dark(#ffffff, var(--ge-dark-color, #121212));&quot;&gt;&lt;font face=&quot;Helvetica&quot; style=&quot;color: rgb(0, 0, 0);&quot;&gt;AWS - Login&lt;/font&gt;&lt;/span&gt;&lt;/div&gt;&lt;/li&gt;&lt;li&gt;&lt;div style=&quot;line-height: 24px; white-space: pre;&quot;&gt;&lt;span style=&quot;background-color: light-dark(#ffffff, var(--ge-dark-color, #121212));&quot;&gt;&lt;font face=&quot;Helvetica&quot; style=&quot;color: rgb(0, 0, 0);&quot;&gt;AWS - Create kubeconfig&lt;/font&gt;&lt;/span&gt;&lt;/div&gt;&lt;/li&gt;&lt;li&gt;&lt;div style=&quot;line-height: 24px; white-space: pre;&quot;&gt;&lt;span style=&quot;background-color: light-dark(#ffffff, var(--ge-dark-color, #121212));&quot;&gt;&lt;font face=&quot;Helvetica&quot; style=&quot;color: rgb(0, 0, 0);&quot;&gt;HELM - Install diff plugin&lt;/font&gt;&lt;/span&gt;&lt;/div&gt;&lt;/li&gt;&lt;li&gt;&lt;div style=&quot;line-height: 24px; white-space: pre;&quot;&gt;&lt;span style=&quot;background-color: light-dark(#ffffff, var(--ge-dark-color, #121212));&quot;&gt;&lt;font face=&quot;Helvetica&quot; style=&quot;color: rgb(0, 0, 0);&quot;&gt;HELM - Add chart repositories&lt;/font&gt;&lt;/span&gt;&lt;/div&gt;&lt;/li&gt;&lt;li&gt;&lt;div style=&quot;line-height: 24px; white-space: pre;&quot;&gt;&lt;font style=&quot;background-color: light-dark(#ffffff, var(--ge-dark-color, #121212)); color: rgb(0, 0, 0);&quot; face=&quot;Helvetica&quot;&gt;Change environment variables&lt;/font&gt;&lt;/div&gt;&lt;/li&gt;&lt;li&gt;&lt;div style=&quot;line-height: 24px; white-space: pre;&quot;&gt;&lt;font style=&quot;background-color: light-dark(#ffffff, var(--ge-dark-color, #121212)); color: rgb(0, 0, 0);&quot; face=&quot;Helvetica&quot;&gt;Show file with changed variables&lt;/font&gt;&lt;/div&gt;&lt;/li&gt;&lt;li&gt;&lt;div style=&quot;line-height: 24px; white-space: pre;&quot;&gt;&lt;font style=&quot;background-color: light-dark(#ffffff, var(--ge-dark-color, #121212)); color: rgb(0, 0, 0);&quot; face=&quot;Helvetica&quot;&gt;Helm/Kubectl diff and save output&lt;/font&gt;&lt;/div&gt;&lt;/li&gt;&lt;li&gt;&lt;div style=&quot;line-height: 24px; white-space: pre;&quot;&gt;&lt;font style=&quot;background-color: light-dark(#ffffff, var(--ge-dark-color, #121212)); color: rgb(0, 0, 0);&quot; face=&quot;Helvetica&quot;&gt;Comment diff on PR if has changes&lt;/font&gt;&lt;/div&gt;&lt;/li&gt;&lt;li&gt;&lt;div style=&quot;line-height: 24px; white-space: pre;&quot;&gt;&lt;font style=&quot;background-color: light-dark(#ffffff, var(--ge-dark-color, #121212)); color: rgb(0, 0, 0);&quot; face=&quot;Helvetica&quot;&gt;Helm upgrade install dry-run ( kubectl don&#39;t run )&lt;/font&gt;&lt;/div&gt;&lt;/li&gt;&lt;li&gt;&lt;div style=&quot;line-height: 24px; white-space: pre;&quot;&gt;&lt;font style=&quot;background-color: light-dark(#ffffff, var(--ge-dark-color, #121212)); color: rgb(0, 0, 0);&quot; face=&quot;Helvetica&quot;&gt;Repeat process from step 6 for all the helm charts and kubectl files&lt;/font&gt;&lt;/div&gt;&lt;/li&gt;&lt;/ol&gt;" vertex="1">
+          <mxGeometry height="320" width="410" x="560" y="1000" as="geometry" />
         </mxCell>
       </root>
     </mxGraphModel>

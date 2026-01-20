@@ -257,7 +257,7 @@ Microsoft Teams (Notification)
 1. User → ALB: HTTP Request
 2. ALB → Target Group: Route to Target
 3. Target Group → Kubernetes Service: Forward Request
-4. Kubernetes Service → Application Pod: Load Balance
+4. Kubernetes Service → Application Pod
 5. Application Pod: Process Request
 6. Application Pod → Kubernetes Service: Return Response
 7. Kubernetes Service → Target Group: Forward Response
@@ -417,16 +417,6 @@ Expose to Prometheus
     │
     ▼
 Show in Grafana
-    │
-    ├──► Severe issue? ──No──► Show in Grafana
-    │
-    Yes
-    │
-    ▼
-Send alert
-    │
-    ▼
-MS Teams notification
     │
     ▼
 Developer fixes
@@ -692,7 +682,6 @@ Port 30100         Port 30300          Port 30200
     │                 │                 │
     ▼                 ▼                 ▼
 Grafana Pod        Prometheus Pod      Loki Pod
-(Helper Node)      (Helper Node)      (Helper Node)
 ```
 
 ## Storage Architecture
@@ -713,19 +702,6 @@ EFS Access Point
     │
     ▼
 AWS EFS File System
-    │
-    │
-    ├─────────────────┐
-    │                 │
-Prometheus         Loki
-    │                 │
-    ▼                 ▼
-Prometheus PVC    Loki PVC
-    │                 │
-    └────────┬─────────┘
-             │
-             ▼
-      AWS EFS File System
 ```
 
 ## Security Architecture
