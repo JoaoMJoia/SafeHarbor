@@ -1,0 +1,4 @@
+---
+# Variables for all hosts
+ansible_user: ubuntu
+timezone: UTC

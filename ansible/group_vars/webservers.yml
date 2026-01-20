@@ -1,0 +1,6 @@
+---
+# Variables for webservers group
+app_message: "Welcome to SafeHarbor Demo App!"
+environment: production
+app_port: 8080
+app_version: v1.0.0

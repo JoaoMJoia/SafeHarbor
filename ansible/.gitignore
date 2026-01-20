@@ -1,0 +1,26 @@
+# Ansible
+*.retry
+.ansible/
+ansible_facts/
+
+# Vault files (if unencrypted backups exist)
+*.vault
+!*.vault.yml
+
+# Local inventory overrides
+inventory.local
+hosts.local
+
+# Environment files
+.env
+.env.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db

@@ -1,0 +1,113 @@
+---
+- name: Configure Demo Application Servers
+  hosts: webservers
+  become: yes
+  vars:
+    app_user: demoapp
+    app_dir: /opt/demo-app
+    app_port: 8080
+    app_version: v1.0.0
+
+  tasks:
+    - name: Ensure system packages are updated
+      package:
+        name:
+          - curl
+          - wget
+        state: present
+      when: ansible_os_family == "Debian"
+
+    - name: Create application user
+      user:
+        name: "{{ app_user }}"
+        system: yes
+        shell: /bin/bash
+        home: "{{ app_dir }}"
+        create_home: yes
+
+    - name: Create application directory
+      file:
+        path: "{{ app_dir }}"
+        state: directory
+        owner: "{{ app_user }}"
+        group: "{{ app_user }}"
+        mode: '0755'
+
+    - name: Copy application file
+      copy:
+        src: ../docker-app/app.js
+        dest: "{{ app_dir }}/app.js"
+        owner: "{{ app_user }}"
+        group: "{{ app_user }}"
+        mode: '0644'
+
+    - name: Copy package.json
+      copy:
+        src: ../docker-app/package.json
+        dest: "{{ app_dir }}/package.json"
+        owner: "{{ app_user }}"
+        group: "{{ app_user }}"
+        mode: '0644'
+
+    - name: Install Node.js
+      block:
+        - name: Add NodeSource repository
+          apt_repository:
+            repo: "deb https://deb.nodesource.com/node_20.x {{ ansible_distribution_release }} main"
+            state: present
+            filename: nodesource
+          when: ansible_os_family == "Debian"
+
+        - name: Install Node.js
+          package:
+            name: nodejs
+            state: present
+
+    - name: Create systemd service file
+      template:
+        src: demo-app.service.j2
+        dest: /etc/systemd/system/demo-app.service
+        owner: root
+        group: root
+        mode: '0644'
+      notify: restart demo-app
+
+    - name: Create environment file
+      template:
+        src: demo-app.env.j2
+        dest: "{{ app_dir }}/.env"
+        owner: "{{ app_user }}"
+        group: "{{ app_user }}"
+        mode: '0644'
+      notify: restart demo-app
+
+    - name: Enable and start demo-app service
+      systemd:
+        name: demo-app
+        enabled: yes
+        state: started
+        daemon_reload: yes
+
+    - name: Wait for service to be ready
+      wait_for:
+        port: "{{ app_port }}"
+        delay: 5
+        timeout: 30
+
+    - name: Verify application is running
+      uri:
+        url: "http://localhost:{{ app_port }}/health"
+        method: GET
+        status_code: 200
+      register: health_check
+
+    - name: Display health check result
+      debug:
+        msg: "Application is healthy: {{ health_check.json }}"
+
+  handlers:
+    - name: restart demo-app
+      systemd:
+        name: demo-app
+        state: restarted
+        daemon_reload: yes
