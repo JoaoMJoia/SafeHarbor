@@ -21,11 +21,19 @@ EKS-specific components documentation covering:
 - Component interactions and data flows
 - User flows and troubleshooting
 
+### [helm/](./helm/)
+Helm package manager documentation and examples:
+- [Helm Guide](./helm/HELM_GUIDE.md) - Comprehensive Helm concepts and best practices
+- [Helm Demo Chart](./helm/helm-demo/) - Working example Helm chart
+- Chart structure, templates, values, and commands
+- Installation, upgrade, and rollback workflows
+
 ## Quick Navigation
 
 - **New to Kubernetes?** Start with [KUBERNETES_COMPONENTS.md](./KUBERNETES_COMPONENTS.md) to understand the fundamentals
 - **Working with EKS?** Check [eks/EKS_COMPONENTS.md](./eks/EKS_COMPONENTS.md) for EKS-specific components
-- **Need troubleshooting?** Both documents include troubleshooting sections
+- **Using Helm?** See [helm/README.md](./helm/README.md) for Helm documentation and examples
+- **Need troubleshooting?** All documents include troubleshooting sections
 
 ## Structure
 
@@ -33,7 +41,18 @@ EKS-specific components documentation covering:
 k8s/
 ├── README.md                    # This file
 ├── KUBERNETES_COMPONENTS.md    # General Kubernetes components
-└── eks/
-    ├── EKS_COMPONENTS.md        # EKS-specific components
-    └── diagrams/                # Architecture diagrams
+├── components/                  # Component documentation
+├── objects/                     # Kubernetes objects documentation
+├── guides/                      # Guides and best practices
+├── demo-app/                    # Demo application YAML files
+├── eks/
+│   ├── EKS_COMPONENTS.md        # EKS-specific components
+│   └── diagrams/                # Architecture diagrams
+└── helm/
+    ├── README.md                # Helm overview
+    ├── HELM_GUIDE.md            # Comprehensive Helm guide
+    └── helm-demo/               # Demo Helm chart
+        ├── Chart.yaml
+        ├── values.yaml
+        └── templates/
 ```

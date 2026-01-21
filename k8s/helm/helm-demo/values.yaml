@@ -1,0 +1,85 @@
+# Default values for helm-demo
+# This is a YAML-formatted file.
+
+# Application name
+nameOverride: ""
+fullnameOverride: ""
+
+# Namespace configuration
+namespace:
+  name: helm-demo
+  create: true
+
+# Image configuration
+image:
+  repository: hashicorp/http-echo
+  pullPolicy: IfNotPresent
+  tag: "latest"
+
+# Application configuration
+app:
+  message: "Hello from SafeHarbor Helm Demo App!"
+  version: "v1"
+  environment: "demo"
+
+# Deployment configuration
+deployment:
+  replicas: 3
+  labels:
+    app: helm-demo
+    version: v1
+
+# Container configuration
+container:
+  name: helm-demo
+  port: 8080
+  args:
+    - -text="Hello from SafeHarbor Helm Demo App! Version: v1"
+    - -listen=:8080
+
+# Resource limits and requests
+resources:
+  requests:
+    memory: "64Mi"
+    cpu: "100m"
+  limits:
+    memory: "128Mi"
+    cpu: "200m"
+
+# Health probes
+probes:
+  liveness:
+    enabled: true
+    path: /
+    port: 8080
+    initialDelaySeconds: 10
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 3
+  readiness:
+    enabled: true
+    path: /
+    port: 8080
+    initialDelaySeconds: 5
+    periodSeconds: 5
+    timeoutSeconds: 3
+    failureThreshold: 3
+
+# Service configuration
+service:
+  type: ClusterIP
+  port: 80
+  targetPort: 8080
+  sessionAffinity: ClientIP
+  sessionAffinityConfig:
+    clientIP:
+      timeoutSeconds: 10800
+
+# ConfigMap configuration
+configMap:
+  enabled: true
+  data:
+    APP_NAME: "SafeHarbor Helm Demo App"
+    APP_VERSION: "v1"
+    ENVIRONMENT: "demo"
+    MESSAGE: "Welcome to the SafeHarbor Helm Demo Application!"
