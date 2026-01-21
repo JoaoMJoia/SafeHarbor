@@ -58,8 +58,8 @@ choco install kubernetes-helm
 ### Install the Demo Chart
 
 ```bash
-# Navigate to the chart directory
-cd helm/helm-demo
+# Navigate to the chart directory (from project root)
+cd k8s/helm/helm-demo
 
 # Install the chart
 helm install my-demo .

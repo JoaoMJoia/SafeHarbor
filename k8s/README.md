@@ -4,14 +4,16 @@ This directory contains comprehensive documentation about Kubernetes components 
 
 ## Documentation Files
 
-### [KUBERNETES_COMPONENTS.md](./KUBERNETES_COMPONENTS.md)
+### [k8s-docs/](./k8s-docs/)
 General Kubernetes components documentation explaining:
 - Control plane components (API Server, etcd, Controller Manager, Scheduler)
 - Node components (kubelet, kube-proxy, Container Runtime)
 - Addon components (DNS, CNI, CSI)
-- Kubernetes objects (Pods, Services, Deployments)
+- Kubernetes objects (Pods, Services, Deployments, Config, Network, Storage, Access Control)
 - Component interactions and request flows
-- Architecture diagrams
+- Architecture diagrams and best practices
+
+See [k8s-docs/README.md](./k8s-docs/README.md) for the complete documentation index.
 
 ### [eks/EKS_COMPONENTS.md](./eks/EKS_COMPONENTS.md)
 EKS-specific components documentation covering:
@@ -30,7 +32,7 @@ Helm package manager documentation and examples:
 
 ## Quick Navigation
 
-- **New to Kubernetes?** Start with [KUBERNETES_COMPONENTS.md](./KUBERNETES_COMPONENTS.md) to understand the fundamentals
+- **New to Kubernetes?** Start with [k8s-docs/README.md](./k8s-docs/README.md) to understand the fundamentals
 - **Working with EKS?** Check [eks/EKS_COMPONENTS.md](./eks/EKS_COMPONENTS.md) for EKS-specific components
 - **Using Helm?** See [helm/README.md](./helm/README.md) for Helm documentation and examples
 - **Need troubleshooting?** All documents include troubleshooting sections
@@ -40,19 +42,20 @@ Helm package manager documentation and examples:
 ```
 k8s/
 ├── README.md                    # This file
-├── KUBERNETES_COMPONENTS.md    # General Kubernetes components
-├── components/                  # Component documentation
-├── objects/                     # Kubernetes objects documentation
-├── guides/                      # Guides and best practices
-├── demo-app/                    # Demo application YAML files
-├── eks/
+├── k8s-docs/                    # General Kubernetes documentation
+│   ├── README.md                # Kubernetes components index
+│   ├── components/              # Component documentation
+│   ├── objects/                 # Kubernetes objects documentation
+│   └── guides/                  # Guides and best practices
+├── helm/                        # Helm package manager
+│   ├── README.md                # Helm overview
+│   ├── HELM_GUIDE.md            # Comprehensive Helm guide
+│   └── helm-demo/               # Demo Helm chart
+│       ├── Chart.yaml
+│       ├── values.yaml
+│       └── templates/
+├── eks/                         # EKS-specific documentation
 │   ├── EKS_COMPONENTS.md        # EKS-specific components
 │   └── diagrams/                # Architecture diagrams
-└── helm/
-    ├── README.md                # Helm overview
-    ├── HELM_GUIDE.md            # Comprehensive Helm guide
-    └── helm-demo/               # Demo Helm chart
-        ├── Chart.yaml
-        ├── values.yaml
-        └── templates/
+└── demo-app/                    # Demo application YAML files
 ```

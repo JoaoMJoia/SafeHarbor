@@ -29,6 +29,13 @@ This is a simple demo application demonstrating a Kubernetes deployment with ass
 - Contains application configuration data
 - Can be mounted as environment variables or files
 
+### Ingress (`ingress.yaml`)
+- **Type**: NGINX Ingress Controller (configurable)
+- **Host**: `demo-app.example.com` (configurable)
+- Provides external HTTP/HTTPS access to the application
+- Routes traffic to the service on port 80
+- Supports annotations for AWS ALB Ingress Controller (commented out)
+
 ## Usage
 
 ### Deploy the application:
@@ -94,8 +101,9 @@ kubectl delete -f k8s/demo-app/
 ## Optional Enhancements
 
 For more advanced use cases, you could add:
-- **Ingress**: External access via HTTP/HTTPS
 - **HorizontalPodAutoscaler**: Auto-scaling based on metrics
 - **PodDisruptionBudget**: Ensures availability during disruptions
 - **NetworkPolicy**: Network security policies
 - **Secret**: For sensitive configuration data
+
+**Note**: An Ingress resource (`ingress.yaml`) is already included in this directory for external HTTP/HTTPS access. Configure it according to your ingress controller (NGINX, AWS ALB, etc.).
