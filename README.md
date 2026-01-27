@@ -48,9 +48,13 @@ SafeHarbor/
 └── terraform/              # Terraform modules and configurations
     ├── amplify.tf          # AWS Amplify infrastructure
     ├── github.tf           # GitHub resources
-    └── terraform-module-github/  # GitHub organization/repository management
-        ├── organization/   # Organization management module
-        └── repository/     # Repository management module
+    ├── reverse-proxy.tf    # Reverse proxy example
+    └── modules/            # Reusable Terraform modules
+        ├── github/         # GitHub organization/repository management
+        │   ├── organization/   # Organization management module
+        │   └── repository/     # Repository management module
+        └── reverse-proxy/     # AWS reverse proxy infrastructure module
+            └── examples/       # Usage examples
 ```
 
 ## Quick Start
@@ -74,7 +78,9 @@ See [k8s/README.md](./k8s/README.md) for Kubernetes documentation and examples.
 See [k8s/helm/README.md](./k8s/helm/README.md) for Helm chart documentation.
 
 ### Terraform
-See [terraform/terraform-module-github/](./terraform/terraform-module-github/) for Terraform module documentation.
+- **GitHub Module**: See [terraform/modules/github/](./terraform/modules/github/) for GitHub organization and repository management
+- **Reverse Proxy Module**: See [terraform/modules/reverse-proxy/](./terraform/modules/reverse-proxy/) for AWS reverse proxy infrastructure
+- **Architecture Guides**: See [terraform/TERRAFORM_GITHUB_ARCHITECTURE.md](./terraform/TERRAFORM_GITHUB_ARCHITECTURE.md) for production setup guides
 
 ## Documentation
 

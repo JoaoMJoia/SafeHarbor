@@ -1,6 +1,6 @@
 # GitHub Infrastructure as Code Example
 #
-# This file demonstrates how to use the terraform-module-github modules
+# This file demonstrates how to use the github modules
 # to manage GitHub organization settings, repositories, teams, and secrets.
 #
 # Prerequisites:
@@ -46,10 +46,10 @@ provider "sops" {}
 
 module "my-org" {
   # Using local module (for development/testing)
-  source = "./terraform-module-github/organization"
+  source = "./modules/github/organization"
   
   # Or use from git repository (for production)
-  # source = "git::https://github.com/my-org/terraform-module-github.git//organization?ref=v0.1.0"
+  # source = "git::https://github.com/my-org/terraform-modules-github.git//organization?ref=v0.1.0"
 
   organization_name = "MyOrganization"
   location          = "United States"
@@ -123,10 +123,10 @@ module "my-org" {
 # Example 1: Main Application Repository
 module "my-application" {
   # Using local module (for development/testing)
-  source = "./terraform-module-github/repository"
+  source = "./modules/github/repository"
   
   # Or use from git repository (for production)
-  # source = "git::https://github.com/my-org/terraform-module-github.git//repository?ref=v0.1.2"
+  # source = "git::https://github.com/my-org/terraform-modules-github.git//repository?ref=v0.1.2"
 
   name                        = "my-application"
   description                 = "Main application repository"
@@ -294,7 +294,7 @@ module "my-application" {
 
 # Example 2: Infrastructure Repository
 module "infrastructure" {
-  source = "./terraform-module-github/repository"
+  source = "./modules/github/repository"
 
   name                        = "infrastructure"
   description                 = "Infrastructure as Code repository"

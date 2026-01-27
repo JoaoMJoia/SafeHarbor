@@ -147,14 +147,14 @@ jobs:
             \`\`\`hcl
             # Example how to use organization module
             module "{example}" {
-              source = "git::https://github.com/your-org/terraform-module-github.git//organization?ref=vX.X.X"
+              source = "git::https://github.com/your-org/terraform-modules-github.git//organization?ref=vX.X.X"
 
               key = "{value}"
             }
             
             # Example how to use repository module
             module "{example}" {
-              source = "git::https://github.com/your-org/terraform-module-github.git//repository?ref=vX.X.X"
+              source = "git::https://github.com/your-org/terraform-modules-github.git//repository?ref=vX.X.X"
 
               key = "{value}"
             }

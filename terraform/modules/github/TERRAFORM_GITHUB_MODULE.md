@@ -14,7 +14,7 @@ This is a comprehensive Terraform module for managing GitHub organizations and r
 The module is organized into two main sub-modules:
 
 ```
-terraform-module-github/
+modules/github/
 ├── organization/     # Manages GitHub organization-level resources
 ├── repository/       # Manages GitHub repository-level resources
 └── example/          # Example usage demonstrating both modules

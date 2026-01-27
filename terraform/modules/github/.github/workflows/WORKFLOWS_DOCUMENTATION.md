@@ -8,12 +8,12 @@
 
 This document explains the GitHub Actions workflows that support and complement the Terraform GitHub module. These workflows provide automated quality assurance, testing, documentation generation, release management, and infrastructure validation for the module itself.
 
-All workflows documented here are located in `terraform-module-github/.github/workflows/` and are specifically designed to maintain the quality, compatibility, and documentation of the Terraform module.
+All workflows documented here are located in `modules/github/.github/workflows/` and are specifically designed to maintain the quality, compatibility, and documentation of the Terraform module.
 
 ## Workflow Architecture
 
 ```
-terraform-module-github/
+modules/github/
 └── .github/workflows/                    # Module-specific workflows
     ├── ci-lint.yaml                      # Code quality and linting
     ├── ci-terraform.yaml                 # Terraform validation and docs
@@ -25,7 +25,7 @@ terraform-module-github/
 
 ## Module-Specific Workflows
 
-These workflows are located in `terraform-module-github/.github/workflows/` and are specifically designed to maintain the quality, compatibility, and documentation of the Terraform module.
+These workflows are located in `modules/github/.github/workflows/` and are specifically designed to maintain the quality, compatibility, and documentation of the Terraform module.
 
 ### 1. CI - Lint (`ci-lint.yaml`)
 

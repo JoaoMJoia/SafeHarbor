@@ -6,8 +6,8 @@ Terraform configuration for managing GitHub organization settings, repositories,
 
 ## Modules
 
-- **Organization Module** (`terraform-module-github/organization/`): Organization settings, members, teams, AWS KMS keys, and organization-wide variables/secrets
-- **Repository Module** (`terraform-module-github/repository/`): Repository configuration, branch protection, access control, environments, variables/secrets, labels, and Dependabot
+- **Organization Module** (`modules/github/organization/`): Organization settings, members, teams, AWS KMS keys, and organization-wide variables/secrets
+- **Repository Module** (`modules/github/repository/`): Repository configuration, branch protection, access control, environments, variables/secrets, labels, and Dependabot
 
 ## Configuration
 
