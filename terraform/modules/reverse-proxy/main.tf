@@ -85,14 +85,33 @@ resource "aws_launch_template" "reverse_proxy" {
     http_put_response_hop_limit = 1
   }
 
-  user_data = base64encode(templatefile("${path.module}/setup.sh.tpl", {
-    backend_url         = var.backend_url
-    log_name            = var.log_name
-    loki_host           = var.loki_host
-    loki_domain         = var.loki_domain
-    reverse_proxy_rules = var.reverse_proxy_rules
-    enable_promtail     = var.enable_promtail
-  }))
+  user_data = base64encode(<<-EOF
+    #!/bin/bash
+    # Set environment variables
+    BACKEND_URL="${var.backend_url}"
+    LOG_NAME="${var.log_name}"
+    LOKI_HOST="${var.loki_host}"
+    LOKI_DOMAIN="${var.loki_domain}"
+    ENABLE_PROMTAIL="${var.enable_promtail}"
+    
+    echo "Setting environment variables..."
+    echo "BACKEND_URL=$BACKEND_URL" | sudo tee -a /etc/environment
+    echo "LOG_NAME=$LOG_NAME" | sudo tee -a /etc/environment
+    echo "LOKI_HOST=$LOKI_HOST" | sudo tee -a /etc/environment
+    echo "LOKI_DOMAIN=$LOKI_DOMAIN" | sudo tee -a /etc/environment
+    echo "ENABLE_PROMTAIL=$ENABLE_PROMTAIL" | sudo tee -a /etc/environment
+    
+    # Export variables for current session
+    export BACKEND_URL
+    export LOG_NAME
+    export LOKI_HOST
+    export LOKI_DOMAIN
+    export ENABLE_PROMTAIL
+    
+    # Run the setup script
+    ${file("${path.module}/setup.sh")}
+    EOF
+  )
 
   tag_specifications {
     resource_type = "instance"
