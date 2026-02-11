@@ -1,0 +1,54 @@
+---
+name: Release
+
+on:
+  # push:
+  #   branches:
+  #     - main
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+  id-token: write
+
+env:
+  NOTIFY_CHANNEL: ${{ vars.MS_TEAMS_CHANNEL_ALERT_HUB }}
+
+jobs:
+  release:
+    name: 'Create release'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Repository Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Bump version and push tag
+        id: tag_version
+        uses: mathieudutour/github-tag-action@v6.2
+        with:
+          github_token: ${{ github.token }}
+          release_branches: main
+          tag_prefix: v
+          dry_run: false
+
+      - name: Create a GitHub release
+        uses: ncipollo/release-action@v1
+        with:
+          tag: ${{ steps.tag_version.outputs.new_tag }}
+          name: Release ${{ steps.tag_version.outputs.new_tag }}
+          generateReleaseNotes: false
+          makeLatest: true
+          allowUpdates: true
+          draft: false
+      
+      - name: Send notification
+        uses: jdcargile/ms-teams-notification@v1.4
+        with:
+          github-token: ${{ github.token }}
+          ms-teams-webhook-uri: ${{ env.NOTIFY_CHANNEL }}
+          notification-color: '#00FF00'
+          notification-summary: "✅ Release created successfully with version ${{ steps.tag_version.outputs.new_tag }}"
+...
