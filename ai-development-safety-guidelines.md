@@ -15,6 +15,6 @@
 - Remove unused code (imports, variables, dead logic)
 - In unit tests, prefer `data-testid` over CSS selectors or container-based queries
 - Make tests resilient to refactors by avoiding implementation-coupled mocks
-- Prefer `return null` over an empty fragment (`<></>`) when intentionally rendering nothing (more explicit and idiomatic in React)
+- Prefer return empty fragment (`<></>`) over an `null`
 - Deduplicate constants (avoid repeated literal values)
 - Replace template literal className merging with the `cn()` utility
