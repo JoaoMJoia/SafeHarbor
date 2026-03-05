@@ -12,9 +12,11 @@
 - Avoid single-letter constants (use meaningful names)
 - Add a blank line before every `return`
 - Replace `React.*` patterns with direct imports (e.g. `useState` instead of `React.useState`)
+- Consider imports at the top of the file
 - Remove unused code (imports, variables, dead logic)
 - In unit tests, prefer `data-testid` over CSS selectors or container-based queries
 - Make tests resilient to refactors by avoiding implementation-coupled mocks
-- Prefer return empty fragment (`<></>`) over an `null`
-- Deduplicate constants (avoid repeated literal values)
-- Replace template literal className merging with the `cn()` utility
+- Check for deduplicate constants (avoid repeated literal values)
+- Replace template literals with `cn()` utility for className when using static and conditional classes
+- When passing props from a hook or object, only pass the keys that the consumer needs; avoid spreading the whole object unless every property is intended to be passed.
+- For conditional rendering in JSX, use logical AND (&&) instead of ternaries unless you need to render something different in both branches (then use a ternary).
