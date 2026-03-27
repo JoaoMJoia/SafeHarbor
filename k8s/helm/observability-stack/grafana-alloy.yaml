@@ -1,0 +1,46 @@
+## helm repo add grafana https://grafana.github.io/helm-charts
+## helm repo update
+## helm install grafana-alloy grafana/alloy -n infrastructure -f grafana-alloy.yaml
+
+## HELM HUB ARTIFACT: https://artifacthub.io/packages/helm/grafana/alloy
+---
+## Override the deployment namespace
+namespaceOverride: "infrastructure"
+
+## Configure destinations for metrics and logs
+destinations:
+  - name: Prometheus
+    type: prometheus
+    url: http://prometheus-grafana-kube-pr-prometheus.infrastructure.svc.cluster.local:9090/api/v1/write
+  - name: Loki
+    type: loki
+    url: http://loki.infrastructure.svc.cluster.local:3100/loki/api/v1/push
+
+## Configure Faro Web SDK receiver
+faroReceiver:
+  enabled: true
+  server:
+    listenAddress: "0.0.0.0"
+    listenPort: 12345
+    ## Configure CORS allowed origins
+    corsAllowedOrigins: 
+      - "http://dev-example-frontend.dev.svc.cluster.local"
+      - "http://qa-example-frontend.qa.svc.cluster.local"
+      - "http://stage-example-frontend.stage.svc.cluster.local"
+      - "http://poc-example-backend.poc.svc.cluster.local"
+    apiKey: "your-secret-key"  # Change this to a secure key
+    maxAllowedPayloadSize: "10MiB"
+    rateLimiting:
+      rate: 100
+
+## Configure Alloy components
+alloy-singleton:
+  enabled: true
+  resources:
+    limits:
+      cpu: 500m
+      memory: 512Mi
+    requests:
+      cpu: 200m
+      memory: 256Mi
+...

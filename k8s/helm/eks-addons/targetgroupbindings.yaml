@@ -1,0 +1,42 @@
+---
+apiVersion: elbv2.k8s.aws/v1beta1
+kind: TargetGroupBinding
+metadata:
+  name: grafana
+  namespace: infrastructure
+spec:
+  serviceRef:
+    name: prometheus-grafana
+    port: 80
+  targetGroupARN: ___GRAFANA_TARGET_GROUP___
+  nodeSelector:
+    matchLabels:
+      node-role: helper
+...
+---
+apiVersion: elbv2.k8s.aws/v1beta1
+kind: TargetGroupBinding
+metadata:
+  name: loki
+  namespace: infrastructure
+spec:
+  serviceRef:
+    name: loki-gateway
+    port: 80
+  targetGroupARN: ___LOKI_TARGET_GROUP___
+...
+---
+apiVersion: elbv2.k8s.aws/v1beta1
+kind: TargetGroupBinding
+metadata:
+  name: prometheus
+  namespace: infrastructure
+spec:
+  serviceRef:
+    name: prometheus-grafana-kube-pr-prometheus
+    port: 9090
+  targetGroupARN: ___PROMETHEUS_TARGET_GROUP___
+  nodeSelector:
+    matchLabels:
+      node-role: helper
+...

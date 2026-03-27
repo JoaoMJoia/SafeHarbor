@@ -1,0 +1,23 @@
+---
+# helm repo add eks https://aws.github.io/eks-charts
+## Upgrade/install CRDs:
+# kubectl apply -k "github.com/aws/eks-charts/stable/aws-load-balancer-controller/crds?ref=master"
+# helm upgrade --install -n kube-system aws-load-balancer-controller eks/aws-load-balancer-controller -f aws-load-balancer-controller.yaml --version 1.5.3 --dry-run --debug
+
+
+serviceAccount:
+  annotations:
+    eks.amazonaws.com/role-arn: ___ALB_ROLE___
+
+resources:
+  limits:
+    memory: 128Mi
+  requests:
+    cpu: 100m
+    memory: 30Mi
+
+clusterName: ___CLUSTER_NAME___
+
+# backendSecurityGroup specifies backend security group id (default controller auto create backend security group)
+backendSecurityGroup: ___ALB_SG___
+...

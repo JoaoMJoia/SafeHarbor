@@ -1,0 +1,109 @@
+---
+# Example Application Type Error Alert
+# This alert is used to monitor the Example Application type error.
+# These alerts are not part of the default rules and are added to the PrometheusRule object.
+## kubectl apply -n infrastructure -f example-application-typeerror.yaml
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  labels:
+    grafana_alert: "1"
+  name: alert-production-example-application-typeerror
+  namespace: infrastructure
+data:
+  rules.yaml: |
+    apiVersion: 1
+    groups:
+        - orgId: 1
+          name: production-Example-Application-TypeError
+          folder: example-application-alerts
+          interval: 1m
+          rules:
+            - uid: cdvl89vn14xkwc
+              title: production-Example-Application-TypeError
+              condition: C
+              data:
+                - refId: A
+                  queryType: range
+                  relativeTimeRange:
+                    from: 10800
+                    to: 0
+                  datasourceUid: P982945308D3682D1
+                  model:
+                    datasource:
+                        type: loki
+                        uid: P982945308D3682D1
+                    editorMode: code
+                    expr: sum(count_over_time({app="example-application", namespace="production"} |= "TypeError" [5m])) by (app)
+                    intervalMs: 1000
+                    maxDataPoints: 43200
+                    queryType: range
+                    refId: A
+                - refId: B
+                  datasourceUid: __expr__
+                  model:
+                    conditions:
+                        - evaluator:
+                            params: []
+                            type: gt
+                          operator:
+                            type: and
+                          query:
+                            params:
+                                - B
+                          reducer:
+                            params: []
+                            type: last
+                          type: query
+                    datasource:
+                        type: __expr__
+                        uid: __expr__
+                    expression: A
+                    intervalMs: 1000
+                    maxDataPoints: 43200
+                    reducer: last
+                    refId: B
+                    type: reduce
+                - refId: C
+                  datasourceUid: __expr__
+                  model:
+                    conditions:
+                        - evaluator:
+                            params:
+                                - 0
+                            type: gt
+                          operator:
+                            type: and
+                          query:
+                            params:
+                                - C
+                          reducer:
+                            params: []
+                            type: last
+                          type: query
+                    datasource:
+                        type: __expr__
+                        uid: __expr__
+                    expression: B
+                    intervalMs: 1000
+                    maxDataPoints: 43200
+                    refId: C
+                    type: threshold
+              dashboardUid: exampleapplicationtypeerror
+              panelId: 1
+              noDataState: OK
+              execErrState: Error
+              for: 1m
+              annotations:
+                __dashboardUid__: exampleapplicationtypeerror
+                __panelId__: "1"
+                description: To display full log click the button "Show context" on the right of the message line
+                summary: production Example Application Type Error Logs!!
+              labels:
+                app: example-application
+                environment: production
+                namespace: production
+                statuscode: none
+                team: developers
+              isPaused: false
+...

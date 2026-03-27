@@ -1,0 +1,106 @@
+---
+  # This workflow is used to diff the Helm chart changes.
+name: Helm Chart Diff
+
+on:
+  workflow_call:
+    inputs:
+      environment:
+        required: true
+        type: string
+        description: 'Environment to deploy to'
+      helm_chart_directory:
+        required: true
+        type: string
+        description: 'Directory containing the Helm chart'
+      application_name:
+        required: false
+        type: string
+        description: 'Application name'
+        default: ${{ github.event.repository.name }}
+      cluster:
+        required: true
+        type: string
+        description: 'Cluster name'
+        
+
+permissions:
+  id-token: write
+  contents: read
+  actions: read
+  pull-requests: write
+
+env:
+  KUBECONFIG: 'kubeconfig'
+  AWS_REGION: ${{ vars.AWS_REGION }}
+  ROLE-TO-ASSUME: arn:aws:iam::${{ secrets.AWS_ORG_ACCOUNT }}:role/github-actions-elp
+
+jobs:
+  diff:
+    name: 'Planning'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash
+        working-directory: ${{ inputs.helm_chart_directory }}
+    steps:
+      - name: Checkout repository code
+        uses: actions/checkout@v6
+
+      - name: Set appVersion for Chart.yaml based on package.json
+        run: |
+          export VERSION=$(jq -r .version ../package.json)
+          echo $VERSION
+          sed -i "s~1.0.0~$VERSION~g" ./Chart.yaml
+          grep appVersion Chart.yaml
+
+      - name: List directory
+        run: |
+          ls -lhatr
+      - name: AWS - Login
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ env.ROLE-TO-ASSUME }}
+          aws-region: ${{ env.AWS_REGION }}
+      - name: AWS - Login ECR
+        uses: aws-actions/amazon-ecr-login@v2
+        id: ecr
+      - name: AWS - ${{ inputs.environment }}-${{ inputs.application_name }} - Get latest ECR image tag 
+        run: |
+          echo "tag=$(aws ecr describe-images --repository-name ${{ inputs.application_name }}/${{ inputs.environment }} --query 'sort_by(imageDetails,& imagePushedAt)[-1].imageTags[0]' --output text)" >> "$GITHUB_ENV"
+      - name: Show environment latest ECR image tag for ${{ inputs.application_name }}/${{ inputs.environment }}
+        run: |
+          echo ${{ env.tag }}
+      - name: AWS - Create kubeconfig
+        run: |
+          aws eks update-kubeconfig --name ${{ inputs.cluster }}  --region ${{ env.AWS_REGION }}  --kubeconfig ./kubeconfig
+      - name: HELM - Install diff plugin
+        run: |
+          helm plugin install https://github.com/databus23/helm-diff
+      - name: HELM - Diff
+        id: helm-diff
+        run: |
+          helm diff upgrade ${{ inputs.environment }}-${{ inputs.application_name }} . --values ${{ inputs.environment }}-values.yaml -n ${{ inputs.environment }} --set image.tag=${{ env.tag }} > diff_output.txt
+          echo "diff_output<<EOF" >> $GITHUB_OUTPUT
+          cat diff_output.txt >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Comment diff on PR
+        if: github.event_name == 'pull_request' && steps.helm-diff.outcome == 'success' && steps.helm-diff.outputs.diff_output != ''
+        uses: thollander/actions-comment-pull-request@v2.4.2
+        with:
+          GITHUB_TOKEN: ${{ github.token }}
+          message: |
+            ## 🔄 Helm Chart Changes for DEV
+            <details>
+            <summary>Click to see the changes</summary>
+
+            ```diff
+            ${{ steps.helm-diff.outputs.diff_output }}
+            ```
+            </details>
+
+      - name: HELM - Dry Run 
+        run: |
+          helm upgrade ${{ inputs.environment }}-${{ inputs.application_name }} . -f ${{ inputs.environment }}-values.yaml -n ${{ inputs.environment }} --set image.tag=${{ env.tag }} --dry-run --debug
+...

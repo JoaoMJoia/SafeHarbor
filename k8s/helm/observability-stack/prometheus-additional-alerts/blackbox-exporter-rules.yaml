@@ -1,0 +1,87 @@
+---
+# Additional Blackbox Exporter Alerts for Production
+# This file contains additional alerts for the Blackbox Exporter in production.
+# These alerts are not part of the default rules and are added to the PrometheusRule object.
+# Should be on same namespace as the prometheus-grafana deployment.
+## kubectl apply -n monitoring -f blackbox-exporter-rules.yaml
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  namespace: infrastructure
+  name: blackbox-exporter
+  labels:
+    release: "prometheus-grafana"
+spec:
+  groups:
+    - name: blackbox-exporter-alerts
+      rules:
+        # Critical alert for production app
+        - alert: ProductionAppIsUnreachable
+          expr: probe_success{target=~"production-app"} == 0
+          for: 5m
+          labels:
+            severity: critical
+          annotations:
+            summary: "{{ $labels.probe_target }} is Unreachable"
+            description: "The probe for {{ $labels.probe_target }} has been failing for more than 5 minutes."
+
+        # Warning alert for dev app
+        - alert: DevAppIsUnreachable
+          expr: probe_success{target=~"dev-app"} == 0
+          for: 15m
+          labels:
+            severity: warning
+          annotations:
+            summary: "{{ $labels.probe_target }} is Unreachable"
+            description: "The probe for {{ $labels.probe_target }} has been failing for more than 15 minutes."
+
+        # Slow HTTPS Response Time
+        - alert: SlowHTTPSResponse
+          expr: probe_duration_seconds > 1
+          for: 2m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Slow HTTPS Response for {{ $labels.instance }}"
+            description: "The HTTPS response took {{ $value }} seconds, which is slower than the acceptable threshold."
+
+        # Missing TLS Encryption
+        - alert: MissingTLS
+          expr: probe_http_ssl == 0
+          for: 1m
+          labels:
+            severity: critical
+          annotations:
+            summary: "No TLS Encryption for {{ $labels.instance }}"
+            description: "The probe did not use SSL/TLS for the connection. Ensure secure communication."
+        
+        # SSL certificate expires in less than 20 days 
+        - alert: SSLCertificateWillExpireSoon
+          expr: 3 <= round((last_over_time(probe_ssl_earliest_cert_expiry[10m]) - time()) / 86400, 0.1) < 20
+          for: 0m
+          labels:
+            severity: warning
+          annotations:
+            summary: SSL certificate will expire soon (instance {{ $labels.instance }})
+            description: "SSL certificate expires in less than 20 days\n  VALUE = {{ $value }}\n  LABELS = {{ $labels }}"
+        
+        # SSL certificate expires in less than 3 days 
+        - alert: CertificateWillExpireSoon
+          expr: 0 <= round((last_over_time(probe_ssl_earliest_cert_expiry[10m]) - time()) / 86400, 0.1) < 3
+          for: 0m
+          labels:
+            severity: critical
+          annotations:
+            summary: SSL certificate will expire soon (instance {{ $labels.instance }})
+            description: "SSL certificate expires in less than 3 days\n  VALUE = {{ $value }}\n  LABELS = {{ $labels }}"
+        
+        # SSL certificate has expired already
+        - alert: CertificateExpired
+          expr: round((last_over_time(probe_ssl_earliest_cert_expiry[10m]) - time()) / 86400, 0.1) < 0
+          for: 0m
+          labels:
+            severity: critical
+          annotations:
+            summary: SSL certificate expired (instance {{ $labels.instance }})
+            description: "SSL certificate has expired already\n  VALUE = {{ $value }}\n  LABELS = {{ $labels }}"
+...

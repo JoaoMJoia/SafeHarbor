@@ -1,0 +1,54 @@
+---
+# Additional Cluster Autoscaler Alerts
+# This file contains additional alerts for the Cluster Autoscaler.
+# These alerts are not part of the default rules and are added to the PrometheusRule object.
+# Should be on same namespace as the prometheus-grafana deployment.
+## kubectl apply -n monitoring -f cluster-autoscaler-rules.yaml
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  namespace: infrastructure
+  name: cluster-autoscaler
+  labels:
+    release: "prometheus-grafana"
+spec:
+  groups:
+    - name: cluster-autoscaler-alerts
+      rules:
+        # Alert when there are unschedulable pods
+        - alert: ClusterAutoscalerUnschedulablePods
+          expr: cluster_autoscaler_unschedulable_pods_count > 0
+          for: 5m
+          labels:
+            severity: critical
+          annotations:
+            summary: "There are unschedulable pods"
+            description: "Cluster Autoscaler is unable to schedule pods in the cluster. There are {{ $value }} unschedulable pods."
+        # Alert when nodes are pending deletion for too long
+        - alert: ClusterAutoscalerPendingNodeDeletions
+          expr: cluster_autoscaler_pending_node_deletions > 0
+          for: 10m
+          labels:
+            severity: critical
+          annotations:
+            summary: "Pending node deletions"
+            description: "There are nodes pending deletion for more than 10 minutes."
+        # Alert when Cluster Autoscaler is unable to scale down
+        - alert: ClusterAutoscalerScaleDownFailure
+          expr: cluster_autoscaler_scaled_down_nodes_total == 0 and cluster_autoscaler_scale_down_in_cooldown == 0
+          for: 10m
+          labels:
+            severity: critical
+          annotations:
+            summary: "Cluster Autoscaler failed to scale down"
+            description: "Cluster Autoscaler has not scaled down any nodes despite being able to do so. This could lead to resource waste."
+        # Alert when Cluster Autoscaler is not safe to autoscale
+        - alert: ClusterAutoscalerClusterUnsafe
+          expr: cluster_autoscaler_cluster_safe_to_autoscale == 0
+          for: 5m
+          labels:
+            severity: critical
+          annotations:
+            summary: "Cluster is unsafe to autoscale"
+            description: "Cluster Autoscaler has detected that the cluster is not safe to autoscale. This could lead to scaling issues."
+...

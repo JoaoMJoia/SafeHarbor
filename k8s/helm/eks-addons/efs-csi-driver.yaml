@@ -1,0 +1,26 @@
+---
+# helm repo add aws-efs-csi-driver https://kubernetes-sigs.github.io/aws-efs-csi-driver/
+# helm repo update aws-efs-csi-driver
+# helm upgrade --install -n kube-system aws-efs-csi-driver aws-efs-csi-driver/aws-efs-csi-driver -f efs-csi-driver.yaml --version 2.4.9 --dry-run --debug
+
+controller:
+  serviceAccount:
+    annotations:
+      eks.amazonaws.com/role-arn: ___EFS_ROLE___
+
+node:
+  serviceAccount:
+    annotations:
+      eks.amazonaws.com/role-arn: ___EFS_ROLE___
+
+storageClasses:
+  - name: efs-sc
+    mountOptions:
+      - tls
+    parameters:
+      provisioningMode: efs-ap
+      fileSystemId: ___EFS_ID___
+      directoryPerms: "700"
+    reclaimPolicy: Delete
+    volumeBindingMode: Immediate
+...

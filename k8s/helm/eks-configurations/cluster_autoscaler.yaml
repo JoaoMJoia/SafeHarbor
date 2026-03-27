@@ -1,0 +1,53 @@
+---
+## Cluster Autoscaler on AWS
+## helm repo add autoscaler https://kubernetes.github.io/autoscaler
+## helm repo update
+## helm upgrade --install -n kube-system cluster-autoscaler autoscaler/cluster-autoscaler -f ./cluster_autoscaler.yaml --version "~9.43.2" --atomic --timeout 5m --debug
+
+## HELM HUB ARTIFACT: https://artifacthub.io/packages/helm/cluster-autoscaler/cluster-autoscaler
+##
+cloudProvider: aws
+
+fullnameOverride: cluster-autoscaler
+
+# AWS-specific configurations
+awsRegion: ___AWS_REGION___
+autoDiscovery:
+  clusterName:
+
+# Image configuration
+image:
+  repository: k8s.gcr.io/autoscaling/cluster-autoscaler
+  # Image tag to support EKS cluster version
+  tag: v1.31.0
+
+# Resources for Cluster Autoscaler
+resources:
+  requests:
+    cpu: 100m
+    memory: 300Mi
+  limits:
+    cpu: 200m
+    memory: 600Mi
+
+# Enable logging
+extraArgs:
+  logtostderr: true
+  stderrthreshold: info
+  v: 4 # Set verbosity level for detailed logs
+  skip-nodes-with-local-storage: false
+  expander: least-waste
+  balance-similar-node-groups: true
+  skip-nodes-with-system-pods: false
+
+rbac:
+  create: true
+  serviceAccount:
+    create: true
+    annotations:
+      eks.amazonaws.com/role-arn: ___CLUSTER_AUTOSCALER_ROLE___
+
+serviceMonitor:
+  enabled: true
+  namespace: infrastructure
+...

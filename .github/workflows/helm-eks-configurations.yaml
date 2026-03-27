@@ -1,0 +1,305 @@
+---
+# This workflow is used to deploy the Helm charts for the EKS Configurations.
+# It requires the following inputs:
+# - deploy: Whether to deploy the resources after diff/dry-run.
+name: 'Helm - EKS Configurations - CI/CD'
+
+on:
+  workflow_dispatch:
+    inputs:
+      deploy:
+        description: 'Deploy resources after diff/dry-run'
+        required: true
+        default: 'false'
+        type: choice
+        options:
+          - 'false'
+          - 'true'
+
+permissions:
+  id-token: write
+  contents: write
+  pull-requests: write
+
+env:
+  KUBECONFIG: 'kubeconfig'
+  AWS_REGION: 'eu-west-1'
+  ROLE-TO-ASSUME: 'arn:aws:iam::111111111111:role/github-actions-example'
+  CLUSTER_ENVIRONMENT: 'non-prod'
+  WORKING_DIRECTORY: 'k8s/helm/eks-configurations'
+  HELM_CMD_TIMEOUT: '5m'
+  ## Kubernetes Resources
+  DEV_VIEW_CLUSTERROLE_FILE: 'dev-view-clusterrole.yaml'
+  DEV_VIEW_CLUSTERROLEBINDING_FILE: 'dev-view-clusterrolebinding.yaml'
+  ## Cluster-Autoscaller
+  CLUSTER_AUTOSCALER_ENVIRONMENT: 'vfq-non-prod'
+  CLUSTER_AUTOSCALER_ROLE: 'arn:aws:iam::111111111111:role/cluster-autoscaler-example-role'
+  CLUSTER_AUTOSCALER_FILE: 'cluster_autoscaler.yaml'
+  CLUSTER_AUTOSCALER_CHART_VERSION: "~9.43.2"
+
+jobs:
+  helm:
+    name: Helm workflow
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash
+        working-directory: ${{ env.WORKING_DIRECTORY }}
+    steps:
+      - name: Checkout repository code
+        uses: actions/checkout@v6
+      - name: yq version
+        run: yq --version
+      - name: List directory
+        run: ls -lhatr
+      - name: AWS - Login
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ env.ROLE-TO-ASSUME }}
+          aws-region: ${{ env.AWS_REGION }}
+      - name: AWS - Create kubeconfig
+        run: |
+          aws eks update-kubeconfig --name vfq-${{ env.CLUSTER_ENVIRONMENT }} \
+            --region ${{ env.AWS_REGION }} --kubeconfig ./kubeconfig
+      - name: HELM - Install diff plugin
+        run: |
+          helm plugin install https://github.com/databus23/helm-diff
+      - name: HELM - Add chart repositories
+        run: |
+          helm repo add autoscaler https://kubernetes.github.io/autoscaler
+          helm repo update
+      - name: NAMESPACES - Show file
+        run: |
+          cat namespaces-${{ env.CLUSTER_ENVIRONMENT }}.yaml
+      - name: NAMESPACES - Kubectl diff
+        id: namespaces
+        continue-on-error: true
+        run: |
+          # Capture both stdout and stderr
+          DIFF_OUTPUT=$(kubectl diff -f namespaces-${{ env.CLUSTER_ENVIRONMENT }}.yaml 2>&1)
+          EXIT_CODE=$?
+
+          # Show the diff output regardless of exit code
+          echo "Diff Output:"
+          echo "$DIFF_OUTPUT"
+
+          # Interpret the exit code
+          if [[ $EXIT_CODE -eq 0 ]]; then
+            echo "No changes detected"
+            echo "has_changes=false" >> $GITHUB_OUTPUT
+          elif [[ $EXIT_CODE -eq 1 ]]; then
+            echo "Changes detected (this is normal)"
+            echo "has_changes=true" >> $GITHUB_OUTPUT
+          else
+            echo "Error running kubectl diff (exit code: $EXIT_CODE)"
+            exit $EXIT_CODE
+          fi
+
+          # Store the output for PR comments
+          echo "diff_output<<EOF" >> $GITHUB_OUTPUT
+          echo "$DIFF_OUTPUT" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+      - name: NAMESPACES - Comment diff on PR
+        if: github.event_name == 'pull_request' && steps.namespaces.outcome == 'success' && steps.namespaces.outputs.diff_output != ''
+        uses: thollander/actions-comment-pull-request@v2.4.2
+        with:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          message: |
+            ## 🔄 [${{ env.CLUSTER_ENVIRONMENT }}] Namespaces Changes
+            <details>
+            <summary>Click to see the changes</summary>
+
+            ```diff
+            ${{ steps.namespaces.outputs.diff_output }}
+            ```
+            </details>
+      - name: DEV-VIEW-CLUSTERROLE - Show file
+        run: |
+          cat ${{ env.DEV_VIEW_CLUSTERROLE_FILE }}
+      - name: DEV-VIEW-CLUSTERROLE - Kubectl diff
+        id: dev-view-clusterrole
+        continue-on-error: true
+        run: |
+          # Capture both stdout and stderr
+          DIFF_OUTPUT=$(kubectl diff -f ${{ env.DEV_VIEW_CLUSTERROLE_FILE }} 2>&1)
+          EXIT_CODE=$?
+
+          # Show the diff output regardless of exit code
+          echo "Diff Output:"
+          echo "$DIFF_OUTPUT"
+
+          # Interpret the exit code
+          if [[ $EXIT_CODE -eq 0 ]]; then
+            echo "No changes detected"
+            echo "has_changes=false" >> $GITHUB_OUTPUT
+          elif [[ $EXIT_CODE -eq 1 ]]; then
+            echo "Changes detected (this is normal)"
+            echo "has_changes=true" >> $GITHUB_OUTPUT
+          else
+            echo "Error running kubectl diff (exit code: $EXIT_CODE)"
+            exit $EXIT_CODE
+          fi
+
+          # Store the output for PR comments
+          echo "diff_output<<EOF" >> $GITHUB_OUTPUT
+          echo "$DIFF_OUTPUT" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+      - name: DEV-VIEW-CLUSTERROLE - Comment diff on PR
+        if: github.event_name == 'pull_request' && steps.dev-view-clusterrole.outcome == 'success' && steps.dev-view-clusterrole.outputs.diff_output != ''
+        uses: thollander/actions-comment-pull-request@v2.4.2
+        with:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          message: |
+            ## 🔄 [${{ env.CLUSTER_ENVIRONMENT }}] Dev View ClusterRole Changes
+            <details>
+            <summary>Click to see the changes</summary>
+
+            ```diff
+            ${{ steps.dev-view-clusterrole.outputs.diff_output }}
+            ```
+            </details>
+      - name: DEV-VIEW-CLUSTERROLEBINDING - Show file
+        run: |
+          cat ${{ env.DEV_VIEW_CLUSTERROLEBINDING_FILE }}
+      - name: DEV-VIEW-CLUSTERROLEBINDING - Kubectl diff
+        id: dev-view-clusterrolebinding
+        continue-on-error: true
+        run: |
+          # Capture both stdout and stderr
+          DIFF_OUTPUT=$(kubectl diff -f ${{ env.DEV_VIEW_CLUSTERROLEBINDING_FILE }} 2>&1)
+          EXIT_CODE=$?
+
+          # Show the diff output regardless of exit code
+          echo "Diff Output:"
+          echo "$DIFF_OUTPUT"
+
+          # Interpret the exit code
+          if [[ $EXIT_CODE -eq 0 ]]; then
+            echo "No changes detected"
+            echo "has_changes=false" >> $GITHUB_OUTPUT
+          elif [[ $EXIT_CODE -eq 1 ]]; then
+            echo "Changes detected (this is normal)"
+            echo "has_changes=true" >> $GITHUB_OUTPUT
+          else
+            echo "Error running kubectl diff (exit code: $EXIT_CODE)"
+            exit $EXIT_CODE
+          fi
+
+          # Store the output for PR comments
+          echo "diff_output<<EOF" >> $GITHUB_OUTPUT
+          echo "$DIFF_OUTPUT" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+      - name: DEV-VIEW-CLUSTERROLEBINDING - Comment diff on PR
+        if: github.event_name == 'pull_request' && steps.dev-view-clusterrolebinding.outcome == 'success' && steps.dev-view-clusterrolebinding.outputs.diff_output != ''
+        uses: thollander/actions-comment-pull-request@v2.4.2
+        with:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          message: |
+            ## 🔄 [${{ env.CLUSTER_ENVIRONMENT }}] Dev View ClusterRoleBinding Changes
+            <details>
+            <summary>Click to see the changes</summary>
+
+            ```diff
+            ${{ steps.dev-view-clusterrolebinding.outputs.diff_output }}
+            ```
+            </details>
+      - name: CLUSTER_AUTOSCALER - Env variables
+        run: |
+          yq eval '.autoDiscovery.clusterName = env(CLUSTER_AUTOSCALER_ENVIRONMENT)' \
+            -i ${{ env.CLUSTER_AUTOSCALER_FILE }}
+          yq eval '.rbac.serviceAccount.annotations."eks.amazonaws.com/role-arn" = env(CLUSTER_AUTOSCALER_ROLE)' \
+            -i ${{ env.CLUSTER_AUTOSCALER_FILE }}
+      - name: CLUSTER_AUTOSCALER - Show file
+        run: |
+          cat ${{ env.CLUSTER_AUTOSCALER_FILE }}
+      - name: CLUSTER_AUTOSCALER - Helm diff
+        id: cluster-autoscaler
+        run: |
+          DIFF_OUTPUT=$(helm diff upgrade -n kube-system cluster-autoscaler \
+            autoscaler/cluster-autoscaler \
+            --values ${{ env.CLUSTER_AUTOSCALER_FILE }} \
+            --version ${{ env.CLUSTER_AUTOSCALER_CHART_VERSION }})
+          echo "$DIFF_OUTPUT"
+          echo "diff_output<<EOF" >> $GITHUB_OUTPUT
+          echo "$DIFF_OUTPUT" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+          # Check if there are changes
+          if [ -z "$DIFF_OUTPUT" ]; then
+            echo "has_changes=false" >> $GITHUB_OUTPUT
+            echo "No changes detected for Cluster Autoscaler"
+          else
+            echo "has_changes=true" >> $GITHUB_OUTPUT
+            echo "Changes detected for Cluster Autoscaler"
+          fi
+      - name: CLUSTER_AUTOSCALER - Comment diff on PR
+        if: github.event_name == 'pull_request' && steps.cluster-autoscaler.outcome == 'success' && steps.cluster-autoscaler.outputs.diff_output != ''
+        uses: thollander/actions-comment-pull-request@v2.4.2
+        with:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          message: |
+            ## 🔄 [${{ env.CLUSTER_ENVIRONMENT }}] Cluster Autoscaler Changes
+            <details>
+            <summary>Click to see the changes</summary>
+
+            ```diff
+            ${{ steps.cluster-autoscaler.outputs.diff_output }}
+            ```
+            </details>
+      - name: CLUSTER_AUTOSCALER - Helm upgrade install dry-run
+        if: steps.cluster-autoscaler.outputs.has_changes == 'true'
+        run: |
+          helm upgrade --install -n kube-system cluster-autoscaler \
+            autoscaler/cluster-autoscaler \
+            -f ${{ env.CLUSTER_AUTOSCALER_FILE }} \
+            --version ${{ env.CLUSTER_AUTOSCALER_CHART_VERSION }} \
+            --atomic --timeout ${{ env.HELM_CMD_TIMEOUT }} \
+            --dry-run --debug
+      - name: Deploy - K8S Metrics Server
+        if: github.event.inputs.deploy == 'true'
+        shell: bash
+        run: |
+          echo "Deploying K8S Metrics Server..."
+          kubectl apply -f https://github.com/kubernetes-sigs/metrics-server/releases/latest/download/components.yaml
+          echo "K8S Metrics Server deployment completed."
+      - name: Deploy - Namespaces
+        if: github.event.inputs.deploy == 'true' && steps.namespaces.outputs.has_changes == 'true'
+        shell: bash
+        run: |
+          echo "Deploying Namespaces..."
+          kubectl apply -f namespaces-${{ env.CLUSTER_ENVIRONMENT }}.yaml
+          echo "Namespaces deployment completed."
+      - name: Deploy - Dev View ClusterRole
+        if: github.event.inputs.deploy == 'true' && steps.dev-view-clusterrole.outputs.has_changes == 'true'
+        shell: bash
+        run: |
+          echo "Deploying Dev View ClusterRole..."
+          kubectl apply -f ${{ env.DEV_VIEW_CLUSTERROLE_FILE }}
+          echo "Dev View ClusterRole deployment completed."
+      - name: Deploy - Dev View ClusterRoleBinding
+        if: github.event.inputs.deploy == 'true' && steps.dev-view-clusterrolebinding.outputs.has_changes == 'true'
+        shell: bash
+        run: |
+          echo "Deploying Dev View ClusterRoleBinding..."
+          kubectl apply -f ${{ env.DEV_VIEW_CLUSTERROLEBINDING_FILE }}
+          echo "Dev View ClusterRoleBinding deployment completed."
+      - name: Deploy - Cluster Autoscaler
+        if: github.event.inputs.deploy == 'true' && steps.cluster-autoscaler.outputs.has_changes == 'true'
+        shell: bash
+        run: |
+          echo "Deploying Cluster Autoscaler..."
+          helm upgrade --install -n kube-system cluster-autoscaler \
+            autoscaler/cluster-autoscaler \
+            -f ${{ env.CLUSTER_AUTOSCALER_FILE }} \
+            --version ${{ env.CLUSTER_AUTOSCALER_CHART_VERSION }} \
+            --atomic --timeout ${{ env.HELM_CMD_TIMEOUT }}
+          echo "Cluster Autoscaler deployment completed."
+      - name: Show Cluster Autoscaler history
+        if: github.event.inputs.deploy == 'true' && steps.cluster-autoscaler.outputs.has_changes == 'true'
+        shell: bash
+        run: |
+          echo "Cluster Autoscaler"
+          helm history -n kube-system cluster-autoscaler | head -1
+          helm history -n kube-system cluster-autoscaler | tail -2
+          echo
+          echo "Done"
+...

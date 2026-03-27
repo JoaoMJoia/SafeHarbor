@@ -1,0 +1,421 @@
+---
+# This workflow is used to deploy the Helm charts for the EKS Addons.
+# It requires the following inputs:
+# - deploy: Whether to deploy the charts after diff/dry-run.
+name: 'Helm - EKS Addons - CI/CD'
+on:
+  workflow_dispatch:
+    inputs:
+      deploy:
+        description: 'Deploy charts after diff/dry-run'
+        required: true
+        default: 'false'
+        type: choice
+        options:
+          - 'false'
+          - 'true'
+
+permissions:
+  id-token: write
+  contents: write
+  pull-requests: write
+
+env:
+  KUBECONFIG: 'kubeconfig'
+  AWS_REGION: 'eu-west-1'
+  ROLE-TO-ASSUME: 'arn:aws:iam::111111111111:role/github-actions-example'
+  CLUSTER_ENVIRONMENT: 'dev'
+  WORKING_DIRECTORY: 'k8s/helm/eks-addons'
+  HELM_CMD_TIMEOUT: '5m'
+  ## AWS Load Balancer Controller
+  ALB_CONTROLLER_FILE: 'aws-load-balancer-controller.yaml'
+  ALB_SECURITY_GROUP: 'sg-0123456789abcdef0'
+  ALB_ROLE: 'arn:aws:iam::111111111111:role/alb-controller-example-role'
+  ALB_CONTROLLER_CHART_VERSION: '1.5.3'
+  ## EFS CSI Driver
+  EFS_ID: 'fs-0123456789abcdef0'
+  EFS_ROLE: 'arn:aws:iam::111111111111:role/efs-csi-example-role'
+  EFS_CSI_DRIVER_FILE: 'efs-csi-driver.yaml'
+  EFS_CSI_DRIVER_CHART_VERSION: '2.4.9'
+  ## CSI Secrets Store Driver
+  SECRETS_STORE_DRIVER_FILE: 'secrets-store-csi-driver.yaml'
+  SECRETS_STORE_DRIVER_CHART_VERSION: '1.3.2'
+  ## Secrets Provider AWS
+  AWS_PROVIDER_FILE: 'secrets-provider-aws.yaml'
+  AWS_PROVIDER_CHART_VERSION: '0.3.2'
+  ## Target Group Bindings
+  TARGETGROUPBINDINGS_FILE: 'targetgroupbindings.yaml'
+  LOKI_TARGETGROUP: 'arn:aws:elasticloadbalancing:eu-west-1:111111111111:targetgroup/loki-example/aaaaaaaaaaaaaaaa'
+  PROMETHEUS_TARGETGROUP: 'arn:aws:elasticloadbalancing:eu-west-1:111111111111:targetgroup/prometheus-example/bbbbbbbbbbbbbbbb'
+  GRAFANA_TARGETGROUP: 'arn:aws:elasticloadbalancing:eu-west-1:111111111111:targetgroup/grafana-example/cccccccccccccccc'
+
+jobs:
+  helm:
+    name: Helm workflow
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash
+        working-directory: ${{ env.WORKING_DIRECTORY }}
+    steps:
+      - name: Checkout repository code
+        uses: actions/checkout@v6
+      - name: yq version
+        run: yq --version
+      - name: List directory
+        run: ls -lhatr
+      - name: AWS - Login
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ env.ROLE-TO-ASSUME }}
+          aws-region: ${{ env.AWS_REGION }}
+      - name: AWS - Create kubeconfig
+        run: |
+          aws eks update-kubeconfig --name vfq-${{ env.CLUSTER_ENVIRONMENT }} \
+            --region ${{ env.AWS_REGION }} --kubeconfig ./kubeconfig
+      - name: HELM - Install diff plugin
+        run: |
+          helm plugin install https://github.com/databus23/helm-diff
+      - name: HELM - Add chart repositories
+        run: |
+          helm repo add eks https://aws.github.io/eks-charts
+          helm repo add aws-efs-csi-driver https://kubernetes-sigs.github.io/aws-efs-csi-driver/
+          helm repo add aws-secrets-manager https://aws.github.io/secrets-store-csi-driver-provider-aws
+          helm repo add secrets-store-csi-driver https://kubernetes-sigs.github.io/secrets-store-csi-driver/charts
+          helm repo update
+      - name: AWS-LOAD-BALANCER-CONTROLLER - Env variables
+        env:
+          CLUSTER_NAME: vfq-${{ env.CLUSTER_ENVIRONMENT }}
+        run: |
+          yq -i '.backendSecurityGroup = strenv(ALB_SECURITY_GROUP)' ${{ env.ALB_CONTROLLER_FILE }}
+          yq -i '.serviceAccount.annotations."eks.amazonaws.com/role-arn" = strenv(ALB_ROLE)' ${{ env.ALB_CONTROLLER_FILE }}
+          yq -i '.clusterName = strenv(CLUSTER_NAME)' ${{ env.ALB_CONTROLLER_FILE }}
+      - name: AWS-LOAD-BALANCER-CONTROLLER - Show file
+        run: |
+          cat ${{ env.ALB_CONTROLLER_FILE }}
+      - name: AWS-LOAD-BALANCER-CONTROLLER - Helm diff
+        id: aws-load-balancer-controller
+        run: |
+          DIFF_OUTPUT=$(helm diff upgrade -n kube-system aws-load-balancer-controller \
+            eks/aws-load-balancer-controller \
+            --values ${{ env.ALB_CONTROLLER_FILE }} \
+            --version ${{ env.ALB_CONTROLLER_CHART_VERSION }})
+          echo "$DIFF_OUTPUT"
+          echo "diff_output<<EOF" >> $GITHUB_OUTPUT
+          echo "$DIFF_OUTPUT" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+          # Check if there are changes
+          if [ -z "$DIFF_OUTPUT" ]; then
+            echo "has_changes=false" >> $GITHUB_OUTPUT
+            echo "No changes detected for AWS Load Balancer Controller"
+          else
+            echo "has_changes=true" >> $GITHUB_OUTPUT
+            echo "Changes detected for AWS Load Balancer Controller"
+          fi
+      - name: AWS-LOAD-BALANCER-CONTROLLER - Comment diff on PR
+        if: github.event_name == 'pull_request' && steps.aws-load-balancer-controller.outcome == 'success' && steps.aws-load-balancer-controller.outputs.diff_output != ''
+        uses: thollander/actions-comment-pull-request@v2.4.2
+        with:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          message: |
+            ## 🔄 [${{ env.CLUSTER_ENVIRONMENT }}] AWS Load Balancer Controller Changes
+            <details>
+            <summary>Click to see the changes</summary>
+
+            ```diff
+            ${{ steps.aws-load-balancer-controller.outputs.diff_output }}
+            ```
+            </details>
+      - name: AWS-LOAD-BALANCER-CONTROLLER - Helm upgrade install dry-run
+        if: steps.aws-load-balancer-controller.outputs.has_changes == 'true'
+        run: |
+          helm upgrade --install -n kube-system aws-load-balancer-controller \
+            eks/aws-load-balancer-controller \
+            -f ${{ env.ALB_CONTROLLER_FILE }} \
+            --version ${{ env.ALB_CONTROLLER_CHART_VERSION }} \
+            --atomic --timeout ${{ env.HELM_CMD_TIMEOUT }} \
+            --dry-run --debug
+      - name: TARGETGROUPBINDINGS - Env variables
+        run: |
+          yq -i 'select(.metadata.name == "grafana").spec.targetGroupARN |= env(GRAFANA_TARGETGROUP)' \
+            ./${{ env.TARGETGROUPBINDINGS_FILE }}
+          yq -i 'select(.metadata.name == "loki").spec.targetGroupARN |= env(LOKI_TARGETGROUP)' \
+            ./${{ env.TARGETGROUPBINDINGS_FILE }}
+          yq -i 'select(.metadata.name == "prometheus").spec.targetGroupARN |= env(PROMETHEUS_TARGETGROUP)' \
+            ./${{ env.TARGETGROUPBINDINGS_FILE }}
+      - name: TARGETGROUPBINDINGS - Show file
+        run: |
+          cat ${{ env.TARGETGROUPBINDINGS_FILE }}
+      - name: TARGETGROUPBINDINGS - Kubectl diff
+        id: targetgroupbindings
+        continue-on-error: true
+        run: |
+          # Capture both stdout and stderr
+          DIFF_OUTPUT=$(kubectl diff -f ${{ env.TARGETGROUPBINDINGS_FILE }} 2>&1)
+          EXIT_CODE=$?
+
+          # Show the diff output regardless of exit code
+          echo "Diff Output:"
+          echo "$DIFF_OUTPUT"
+
+          # Interpret the exit code
+          if [[ $EXIT_CODE -eq 0 ]]; then
+            echo "No changes detected"
+            echo "has_changes=false" >> $GITHUB_OUTPUT
+          elif [[ $EXIT_CODE -eq 1 ]]; then
+            echo "Changes detected (this is normal)"
+            echo "has_changes=true" >> $GITHUB_OUTPUT
+          else
+            echo "Error running kubectl diff (exit code: $EXIT_CODE)"
+            exit $EXIT_CODE
+          fi
+
+          # Store the output for PR comments
+          echo "diff_output<<EOF" >> $GITHUB_OUTPUT
+          echo "$DIFF_OUTPUT" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+      - name: TARGETGROUPBINDINGS - Comment diff on PR
+        if: github.event_name == 'pull_request' && steps.targetgroupbindings.outcome == 'success' && steps.targetgroupbindings.outputs.diff_output != ''
+        uses: thollander/actions-comment-pull-request@v2.4.2
+        with:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          message: |
+            ## 🔄 [${{ env.CLUSTER_ENVIRONMENT }}] Target Group Bindings Changes
+            <details>
+            <summary>Click to see the changes</summary>
+
+            ```diff
+            ${{ steps.targetgroupbindings.outputs.diff_output }}
+            ```
+            </details>
+      - name: EFS-CSI-DRIVER - Env variables
+        run: |
+          yq -i '.storageClasses[0].parameters.fileSystemId = strenv(EFS_ID)' ${{ env.EFS_CSI_DRIVER_FILE }}
+          yq -i '.controller.serviceAccount.annotations."eks.amazonaws.com/role-arn" = strenv(EFS_ROLE)' ${{ env.EFS_CSI_DRIVER_FILE }}
+          yq -i '.node.serviceAccount.annotations."eks.amazonaws.com/role-arn" = strenv(EFS_ROLE)' ${{ env.EFS_CSI_DRIVER_FILE }}
+      - name: EFS-CSI-DRIVER - Show file
+        run: |
+          cat ${{ env.EFS_CSI_DRIVER_FILE }}
+      - name: EFS-CSI-DRIVER - Helm diff
+        id: efs-csi-driver
+        run: |
+          DIFF_OUTPUT=$(helm diff upgrade -n kube-system aws-efs-csi-driver \
+            aws-efs-csi-driver/aws-efs-csi-driver \
+            --values ${{ env.EFS_CSI_DRIVER_FILE }} \
+            --version ${{ env.EFS_CSI_DRIVER_CHART_VERSION }})
+          echo "$DIFF_OUTPUT"
+          echo "diff_output<<EOF" >> $GITHUB_OUTPUT
+          echo "$DIFF_OUTPUT" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+          # Check if there are changes
+          if [ -z "$DIFF_OUTPUT" ]; then
+            echo "has_changes=false" >> $GITHUB_OUTPUT
+            echo "No changes detected for EFS CSI Driver"
+          else
+            echo "has_changes=true" >> $GITHUB_OUTPUT
+            echo "Changes detected for EFS CSI Driver"
+          fi
+      - name: EFS-CSI-DRIVER - Comment diff on PR
+        if: github.event_name == 'pull_request' && steps.efs-csi-driver.outcome == 'success' && steps.efs-csi-driver.outputs.diff_output != ''
+        uses: thollander/actions-comment-pull-request@v2.4.2
+        with:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          message: |
+            ## 🔄 [${{ env.CLUSTER_ENVIRONMENT }}] EFS CSI Driver Changes
+            <details>
+            <summary>Click to see the changes</summary>
+
+            ```diff
+            ${{ steps.efs-csi-driver.outputs.diff_output }}
+            ```
+            </details>
+      - name: EFS-CSI-DRIVER - Helm upgrade install dry-run
+        if: steps.efs-csi-driver.outputs.has_changes == 'true'
+        run: |
+          helm upgrade --install -n kube-system aws-efs-csi-driver \
+            aws-efs-csi-driver/aws-efs-csi-driver \
+            -f ${{ env.EFS_CSI_DRIVER_FILE }} \
+            --version ${{ env.EFS_CSI_DRIVER_CHART_VERSION }} \
+            --atomic --timeout ${{ env.HELM_CMD_TIMEOUT }} \
+            --dry-run --debug
+      - name: CSI-SECRETS-STORE - Show file
+        run: |
+          cat ${{ env.SECRETS_STORE_DRIVER_FILE }}
+      - name: CSI-SECRETS-STORE - Helm diff
+        id: csi-secrets-store
+        run: |
+          DIFF_OUTPUT=$(helm diff upgrade -n kube-system csi-secrets-store \
+            secrets-store-csi-driver/secrets-store-csi-driver \
+            --values ${{ env.SECRETS_STORE_DRIVER_FILE }} \
+            --version ${{ env.SECRETS_STORE_DRIVER_CHART_VERSION }})
+          echo "$DIFF_OUTPUT"
+          echo "diff_output<<EOF" >> $GITHUB_OUTPUT
+          echo "$DIFF_OUTPUT" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+          # Check if there are changes
+          if [ -z "$DIFF_OUTPUT" ]; then
+            echo "has_changes=false" >> $GITHUB_OUTPUT
+            echo "No changes detected for CSI Secrets Store"
+          else
+            echo "has_changes=true" >> $GITHUB_OUTPUT
+            echo "Changes detected for CSI Secrets Store"
+          fi
+      - name: CSI-SECRETS-STORE - Comment diff on PR
+        if: github.event_name == 'pull_request' && steps.csi-secrets-store.outcome == 'success' && steps.csi-secrets-store.outputs.diff_output != ''
+        uses: thollander/actions-comment-pull-request@v2.4.2
+        with:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          message: |
+            ## 🔄 [${{ env.CLUSTER_ENVIRONMENT }}] CSI Secrets Store Changes
+            <details>
+            <summary>Click to see the changes</summary>
+
+            ```diff
+            ${{ steps.csi-secrets-store.outputs.diff_output }}
+            ```
+            </details>
+      - name: CSI-SECRETS-STORE - Helm upgrade install dry-run
+        if: steps.csi-secrets-store.outputs.has_changes == 'true'
+        run: |
+          helm upgrade --install -n kube-system csi-secrets-store \
+            secrets-store-csi-driver/secrets-store-csi-driver \
+            -f ${{ env.SECRETS_STORE_DRIVER_FILE }} \
+            --version ${{ env.SECRETS_STORE_DRIVER_CHART_VERSION }} \
+            --atomic --timeout ${{ env.HELM_CMD_TIMEOUT }} \
+            --dry-run --debug
+      - name: SECRETS-PROVIDER-AWS - Show file
+        run: |
+          cat ${{ env.AWS_PROVIDER_FILE }}
+      - name: SECRETS-PROVIDER-AWS - Helm diff
+        id: secrets-provider-aws
+        run: |
+          DIFF_OUTPUT=$(helm diff upgrade -n kube-system secrets-provider-aws \
+            aws-secrets-manager/secrets-store-csi-driver-provider-aws \
+            --values ${{ env.AWS_PROVIDER_FILE }} \
+            --version ${{ env.AWS_PROVIDER_CHART_VERSION }})
+          echo "$DIFF_OUTPUT"
+          echo "diff_output<<EOF" >> $GITHUB_OUTPUT
+          echo "$DIFF_OUTPUT" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+          # Check if there are changes
+          if [ -z "$DIFF_OUTPUT" ]; then
+            echo "has_changes=false" >> $GITHUB_OUTPUT
+            echo "No changes detected for Secrets Provider AWS"
+          else
+            echo "has_changes=true" >> $GITHUB_OUTPUT
+            echo "Changes detected for Secrets Provider AWS"
+          fi
+      - name: SECRETS-PROVIDER-AWS - Comment diff on PR
+        if: github.event_name == 'pull_request' && steps.secrets-provider-aws.outcome == 'success' && steps.secrets-provider-aws.outputs.diff_output != ''
+        uses: thollander/actions-comment-pull-request@v2.4.2
+        with:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          message: |
+            ## 🔄 [${{ env.CLUSTER_ENVIRONMENT }}] Secrets Provider AWS Changes
+            <details>
+            <summary>Click to see the changes</summary>
+
+            ```diff
+            ${{ steps.secrets-provider-aws.outputs.diff_output }}
+            ```
+            </details>
+      - name: SECRETS-PROVIDER-AWS - Helm upgrade install dry-run
+        if: steps.secrets-provider-aws.outputs.has_changes == 'true'
+        run: |
+          helm upgrade --install -n kube-system secrets-provider-aws \
+            aws-secrets-manager/secrets-store-csi-driver-provider-aws \
+            -f ${{ env.AWS_PROVIDER_FILE }} \
+            --version ${{ env.AWS_PROVIDER_CHART_VERSION }} \
+            --atomic --timeout ${{ env.HELM_CMD_TIMEOUT }} \
+            --dry-run --debug
+      - name: Deploy - AWS Load Balancer Controller
+        if: github.event.inputs.deploy == 'true' && steps.aws-load-balancer-controller.outputs.has_changes == 'true'
+        shell: bash
+        run: |
+          echo "Deploying AWS Load Balancer Controller..."
+          kubectl apply -k "github.com/aws/eks-charts/stable/aws-load-balancer-controller/crds?ref=master"
+          helm upgrade --install -n kube-system aws-load-balancer-controller \
+            eks/aws-load-balancer-controller \
+            -f ${{ env.ALB_CONTROLLER_FILE }} \
+            --version ${{ env.ALB_CONTROLLER_CHART_VERSION }} \
+            --atomic --timeout ${{ env.HELM_CMD_TIMEOUT }}
+          echo "AWS Load Balancer Controller deployment completed."
+
+      - name: Deploy - Target Group Bindings
+        if: github.event.inputs.deploy == 'true' && steps.targetgroupbindings.outputs.has_changes == 'true'
+        shell: bash
+        run: |
+          echo "Deploying Target Group Bindings..."
+          kubectl apply -f ${{ env.TARGETGROUPBINDINGS_FILE }}
+          echo "Target Group Bindings deployment completed."
+
+      - name: Deploy - CSI Secrets Store Driver
+        if: github.event.inputs.deploy == 'true' && steps.csi-secrets-store.outputs.has_changes == 'true'
+        shell: bash
+        run: |
+          echo "Deploying CSI Secrets Store Driver..."
+          helm upgrade --install -n kube-system csi-secrets-store \
+            secrets-store-csi-driver/secrets-store-csi-driver \
+            -f ${{ env.SECRETS_STORE_DRIVER_FILE }} \
+            --version ${{ env.SECRETS_STORE_DRIVER_CHART_VERSION }} \
+            --atomic --timeout ${{ env.HELM_CMD_TIMEOUT }}
+          echo "CSI Secrets Store Driver deployment completed."
+
+      - name: Deploy - Secrets Provider AWS
+        if: github.event.inputs.deploy == 'true' && steps.secrets-provider-aws.outputs.has_changes == 'true'
+        shell: bash
+        run: |
+          echo "Deploying Secrets Provider AWS..."
+          helm upgrade --install -n kube-system secrets-provider-aws \
+            aws-secrets-manager/secrets-store-csi-driver-provider-aws \
+            -f ${{ env.AWS_PROVIDER_FILE }} \
+            --version ${{ env.AWS_PROVIDER_CHART_VERSION }} \
+            --atomic --timeout ${{ env.HELM_CMD_TIMEOUT }}
+          echo "Secrets Provider AWS deployment completed."
+
+      - name: Deploy - EFS CSI Driver
+        if: github.event.inputs.deploy == 'true' && steps.efs-csi-driver.outputs.has_changes == 'true'
+        shell: bash
+        run: |
+          echo "Deploying EFS CSI Driver..."
+          helm upgrade --install -n kube-system aws-efs-csi-driver \
+            aws-efs-csi-driver/aws-efs-csi-driver \
+            -f ${{ env.EFS_CSI_DRIVER_FILE }} \
+            --version ${{ env.EFS_CSI_DRIVER_CHART_VERSION }} \
+            --atomic --timeout ${{ env.HELM_CMD_TIMEOUT }}
+          echo "EFS CSI Driver deployment completed."
+
+      - name: Show AWS Load Balancer Controller history
+        if: github.event.inputs.deploy == 'true' && steps.aws-load-balancer-controller.outputs.has_changes == 'true'
+        shell: bash
+        run: |
+          echo "aws-load-balancer-controller"
+          helm history -n kube-system aws-load-balancer-controller | head -1
+          helm history -n kube-system aws-load-balancer-controller | tail -2
+          echo
+      - name: Show CSI Secrets Store history
+        if: github.event.inputs.deploy == 'true' && steps.csi-secrets-store.outputs.has_changes == 'true'
+        shell: bash
+        run: |
+          echo "csi-secrets-store"
+          helm history -n kube-system csi-secrets-store | head -1
+          helm history -n kube-system csi-secrets-store | tail -2
+          echo
+      - name: Show Secrets Provider AWS history
+        if: github.event.inputs.deploy == 'true' && steps.secrets-provider-aws.outputs.has_changes == 'true'
+        shell: bash
+        run: |
+          echo "secrets-provider-aws"
+          helm history -n kube-system secrets-provider-aws | head -1
+          helm history -n kube-system secrets-provider-aws | tail -2
+          echo
+      - name: Show EFS CSI Driver history
+        if: github.event.inputs.deploy == 'true' && steps.efs-csi-driver.outputs.has_changes == 'true'
+        shell: bash
+        run: |
+          echo "aws-efs-csi-driver"
+          helm history -n kube-system aws-efs-csi-driver | head -1
+          helm history -n kube-system aws-efs-csi-driver | tail -2
+          echo
+          echo "Done"
+...

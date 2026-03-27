@@ -1,0 +1,452 @@
+---
+# This workflow is used to deploy the Helm charts for the EKS Observability Stack.
+# It requires the following inputs:
+# - deploy: Whether to deploy the charts after diff/dry-run.
+name: 'Helm - EKS Observability Stack - CI/CD'
+
+on:
+  workflow_dispatch:
+    inputs:
+      deploy:
+        description: 'Deploy charts after diff/dry-run'
+        required: true
+        default: 'false'
+        type: choice
+        options:
+          - 'false'
+          - 'true'
+
+permissions:
+  id-token: write
+  contents: write
+  pull-requests: write
+
+env:
+  KUBECONFIG: 'kubeconfig'
+  AWS_REGION: 'eu-west-1'
+  ROLE-TO-ASSUME: 'arn:aws:iam::111111111111:role/github-actions-example'
+  CLUSTER_ENVIRONMENT: 'dev'
+  WORKING_DIRECTORY: 'k8s/helm/observability-stack'
+  HELM_CMD_TIMEOUT: '5m'
+  ## Observability-Stack
+  # Kube-prometheus-stack
+  KUBE_PROMETHEUS_STACK_FILE: './kube-prometheus.yaml'
+  PROMETHEUS_GRAFANA_CHART_VERSION: '~61.3.1'
+  PROMETHEUS_URL: 'https://prometheus.dev.example.com'
+  AZURE_APP_ID: '11111111-2222-3333-4444-555555555555'
+  AZURE_APP_SECRET: 'example-azure-app-secret'
+  AZURE_TENANT_ID: '66666666-7777-8888-9999-000000000000'
+  GRAFANA_URL: 'https://grafana.dev.example.com'
+  GRAFANA_DEVELOPERS_MSTEAMS_CHANNEL_NAME: 'developers-alerts'
+  GRAFANA_DEVELOPERS_MSTEAMS_CHANNEL_UID: 'dev-team-uid-1234'
+  GRAFANA_DEVELOPERS_MSTEAMS_CHANNEL_URL: 'https://example.webhook.office.com/dev'
+  GRAFANA_INFRASTRUCTURE_CHANNEL_NAME: 'infrastructure-alerts'
+  GRAFANA_INFRASTRUCTURE_CHANNEL_UID: 'infra-team-uid-5678'
+  GRAFANA_INFRASTRUCTURE_CHANNEL_URL: 'https://example.webhook.office.com/infra'
+  GRAFANA_PASSWORD: 'example-grafana-password'
+  ALERTMANAGER_INFRASTRUCTURE_CHANNEL_NAME: 'infra-alertmanager'
+  ALERTMANAGER_INFRASTRUCTURE_CHANNEL_URL: 'https://example.webhook.office.com/alertmanager'
+  AWS_USER_GRAFANA_CLOUDWATCH_ACCESSKEY: 'EXAMPLEACCESSKEY12345'
+  AWS_USER_GRAFANA_CLOUDWATCH_SECRETKEY: 'exampleSecretKeyValue1234567890'
+  GRAFANA_GITHUB_ACCESS_TOKEN: 'ghp_exampleToken1234567890'
+  # Loki
+  LOKI_FILE: './loki.yaml'
+  LOKI_S3_URL: 's3://eu-west-1/example-observability-loki'
+  LOKI_ROLE: 'arn:aws:iam::111111111111:role/loki-example-role'
+  LOKI_BUCKET_NAME: 'example-observability-loki'
+  LOKI_CHART_VERSION: '~5.48.0'
+  # Promtail
+  PROMTAIL_FILE: './promtail.yaml'
+  PROMTAIL_CHART_VERSION: '~6.15.5'
+  # Prometheus MSTeams
+  PROMETHEUS_MSTEAMS_FILE: './prometheus-msteams.yaml'
+  PROMETHEUS_MSTEAMS_CHART_VERSION: '~1.3.4'
+  # Blackbox Exporter
+  BLACKBOX_EXPORTER_FILE: './blackbox-exporter.yaml'
+  BLACKBOX_EXPORTER_CHART_VERSION: '~11.0.0'
+
+jobs:  
+  helm:
+    name: Helm workflow
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash
+        working-directory: ${{ env.WORKING_DIRECTORY }}
+    steps:
+      - name: Checkout repository code
+        uses: actions/checkout@v6
+      - name: yq version
+        run: yq --version
+      - name: List directory
+        run: ls -lhatr
+      - name: AWS - Login
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ env.ROLE-TO-ASSUME }}
+          aws-region: ${{ env.AWS_REGION }}
+      - name: AWS - Create kubeconfig
+        run: |
+          aws eks update-kubeconfig --name vfq-${{ env.CLUSTER_ENVIRONMENT }} --region ${{ env.AWS_REGION }}  --kubeconfig ./kubeconfig
+      - name: HELM - Install diff plugin
+        run: |
+          helm plugin install https://github.com/databus23/helm-diff
+      - name: HELM - Add chart repositories
+        run: |
+          helm repo add grafana https://grafana.github.io/helm-charts
+          helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
+          helm repo add prometheus-msteams https://prometheus-msteams.github.io/prometheus-msteams/
+          helm repo update
+      - name: KUBE-PROMETHEUS-STACK - List Alerts and Dashboards
+        run: |
+          echo PROMETHEUS ADDITIONAL ALERT RULES
+          ls prometheus-additional-alerts/*.yaml
+          # ls prometheus-additional-alerts/${{ env.CLUSTER_ENVIRONMENT }}/*.yaml
+          echo GRAFANA ALERTS
+          ls grafana-alerts/${{ env.CLUSTER_ENVIRONMENT }}/*.yaml
+          echo GRAFANA DASHBOARDS
+          ls grafana-dashboards/*.yaml
+          ls grafana-dashboards/${{ env.CLUSTER_ENVIRONMENT }}/*.yaml
+      - name: KUBE-PROMETHEUS-STACK - Env variables
+        run: |
+          yq -i '.grafana.adminPassword = strenv(GRAFANA_PASSWORD)' ${{ env.KUBE_PROMETHEUS_STACK_FILE }}
+          yq -i '.grafana."grafana.ini"."auth.azuread".client_id = strenv(AZURE_APP_ID)' ${{ env.KUBE_PROMETHEUS_STACK_FILE }}
+          yq -i '.grafana."grafana.ini"."auth.azuread".client_secret = strenv(AZURE_APP_SECRET)' ${{ env.KUBE_PROMETHEUS_STACK_FILE }}
+          sed -i "s~___AZURE_TENANT_ID___~${{ env.AZURE_TENANT_ID }}~g" ${{ env.KUBE_PROMETHEUS_STACK_FILE }}
+          sed -i "s~___PROMETHEUS_URL___~${{ env.PROMETHEUS_URL }}~g" ${{ env.KUBE_PROMETHEUS_STACK_FILE }}
+          sed -i "s~___GRAFANA_URL___~${{ env.GRAFANA_URL }}~g" ${{ env.KUBE_PROMETHEUS_STACK_FILE }}
+          sed -i "s~___GRAFANA_DEVELOPERS_MSTEAMS_CHANNEL_NAME___~${{ env.GRAFANA_DEVELOPERS_MSTEAMS_CHANNEL_NAME }}~g" ${{ env.KUBE_PROMETHEUS_STACK_FILE }}
+          sed -i "s~___GRAFANA_DEVELOPERS_MSTEAMS_CHANNEL_UID___~${{ env.GRAFANA_DEVELOPERS_MSTEAMS_CHANNEL_UID }}~g" ${{ env.KUBE_PROMETHEUS_STACK_FILE }}
+          sed -i "s~___GRAFANA_DEVELOPERS_MSTEAMS_CHANNEL_URL___~${{ env.GRAFANA_DEVELOPERS_MSTEAMS_CHANNEL_URL }}~g" ${{ env.KUBE_PROMETHEUS_STACK_FILE }}
+          sed -i "s~___GRAFANA_INFRASTRUCTURE_CHANNEL_NAME___~${{ env.GRAFANA_INFRASTRUCTURE_CHANNEL_NAME }}~g" ${{ env.KUBE_PROMETHEUS_STACK_FILE }}
+          sed -i "s~___GRAFANA_INFRASTRUCTURE_CHANNEL_UID___~${{ env.GRAFANA_INFRASTRUCTURE_CHANNEL_UID }}~g" ${{ env.KUBE_PROMETHEUS_STACK_FILE }}
+          sed -i "s~___GRAFANA_INFRASTRUCTURE_CHANNEL_URL___~${{ env.GRAFANA_INFRASTRUCTURE_CHANNEL_URL }}~g" ${{ env.KUBE_PROMETHEUS_STACK_FILE }}
+          sed -i "s~___ALERTMANAGER_INFRASTRUCTURE_CHANNEL_NAME___~${{ env.ALERTMANAGER_INFRASTRUCTURE_CHANNEL_NAME }}~g" ${{ env.KUBE_PROMETHEUS_STACK_FILE }}
+          sed -i "s~___ALERTMANAGER_INFRASTRUCTURE_CHANNEL_URL___~${{ env.ALERTMANAGER_INFRASTRUCTURE_CHANNEL_URL }}~g" ${{ env.KUBE_PROMETHEUS_STACK_FILE }}
+          sed -i "s~___AWS_USER_GRAFANA_CLOUDWATCH_ACCESSKEY___~${{ env.AWS_USER_GRAFANA_CLOUDWATCH_ACCESSKEY }}~g" ${{ env.KUBE_PROMETHEUS_STACK_FILE }}
+          sed -i "s~___AWS_USER_GRAFANA_CLOUDWATCH_SECRETKEY___~${{ env.AWS_USER_GRAFANA_CLOUDWATCH_SECRETKEY }}~g" ${{ env.KUBE_PROMETHEUS_STACK_FILE }}
+          sed -i "s~___GRAFANA_GITHUB_ACCESS_TOKEN___~${{ env.GRAFANA_GITHUB_ACCESS_TOKEN }}~g" ${{ env.KUBE_PROMETHEUS_STACK_FILE }}
+      - name: KUBE-PROMETHEUS-STACK - Show file
+        run: |
+          cat ${{ env.KUBE_PROMETHEUS_STACK_FILE }}
+      - name: KUBE-PROMETHEUS-STACK - Helm diff
+        id: kube-prometheus-stack
+        run: |
+          DIFF_OUTPUT=$(helm diff upgrade -n infrastructure prometheus-grafana prometheus-community/kube-prometheus-stack --values ${{ env.KUBE_PROMETHEUS_STACK_FILE }} --version ${{ env.PROMETHEUS_GRAFANA_CHART_VERSION }})
+          echo "$DIFF_OUTPUT"
+          echo "diff_output<<EOF" >> $GITHUB_OUTPUT
+          echo "$DIFF_OUTPUT" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+          # Check if there are changes
+          if [ -z "$DIFF_OUTPUT" ]; then
+            echo "has_changes=false" >> $GITHUB_OUTPUT
+            echo "No changes detected for Kube Prometheus Stack"
+          else
+            echo "has_changes=true" >> $GITHUB_OUTPUT
+            echo "Changes detected for Kube Prometheus Stack"
+          fi
+      - name: KUBE-PROMETHEUS-STACK - Comment diff on PR
+        if: github.event_name == 'pull_request' && steps.kube-prometheus-stack.outcome == 'success' && steps.kube-prometheus-stack.outputs.diff_output != ''
+        uses: thollander/actions-comment-pull-request@v2.4.2
+        with:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          message: |
+            ## 🔄 [${{ env.CLUSTER_ENVIRONMENT }}] Kube Prometheus Stack Changes
+            <details>
+            <summary>Click to see the changes</summary>
+
+            ```diff
+            ${{ steps.kube-prometheus-stack.outputs.diff_output }}
+            ```
+            </details>
+      - name: KUBE-PROMETHEUS-STACK - Helm upgrade install dry-run
+        if: steps.kube-prometheus-stack.outputs.has_changes == 'true'
+        run: |
+          helm upgrade --install -n infrastructure prometheus-grafana \
+            prometheus-community/kube-prometheus-stack \
+            -f ${{ env.KUBE_PROMETHEUS_STACK_FILE }} \
+            --version ${{ env.PROMETHEUS_GRAFANA_CHART_VERSION }} \
+            --atomic --timeout ${{ env.HELM_CMD_TIMEOUT }} \
+            --dry-run --debug
+      - name: LOKI - Env variables
+        run: |
+          yq -i '.loki.storage.s3.s3 = strenv(LOKI_S3_URL)' ${{ env.LOKI_FILE }}
+          yq -i '.loki.storage_config.aws.s3 = strenv(LOKI_S3_URL)' ${{ env.LOKI_FILE }}
+          yq -i '.loki.storage.bucketNames.chunks = strenv(LOKI_BUCKET_NAME)' ${{ env.LOKI_FILE }}
+          yq -i '.loki.storage.bucketNames.ruler = strenv(LOKI_BUCKET_NAME)' ${{ env.LOKI_FILE }}
+          yq -i '.loki.storage.bucketNames.admin = strenv(LOKI_BUCKET_NAME)' ${{ env.LOKI_FILE }}
+          yq -i '.loki.storage_config.aws.bucketnames = strenv(LOKI_BUCKET_NAME)' ${{ env.LOKI_FILE }}
+          yq -i '.serviceAccount.annotations."eks.amazonaws.com/role-arn" = strenv(LOKI_ROLE)' ${{ env.LOKI_FILE }}
+      - name: LOKI - Show file
+        run: |
+          cat ${{ env.LOKI_FILE }}
+      - name: LOKI - Helm diff
+        id: loki
+        run: |
+          DIFF_OUTPUT=$(helm diff upgrade -n infrastructure loki grafana/loki --values ${{ env.LOKI_FILE }} --version ${{ env.LOKI_CHART_VERSION }})
+          echo "$DIFF_OUTPUT"
+          echo "diff_output<<EOF" >> $GITHUB_OUTPUT
+          echo "$DIFF_OUTPUT" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+          # Check if there are changes
+          if [ -z "$DIFF_OUTPUT" ]; then
+            echo "has_changes=false" >> $GITHUB_OUTPUT
+            echo "No changes detected for Loki"
+          else
+            echo "has_changes=true" >> $GITHUB_OUTPUT
+            echo "Changes detected for Loki"
+          fi
+      - name: LOKI - Comment diff on PR
+        if: github.event_name == 'pull_request' && steps.loki.outcome == 'success' && steps.loki.outputs.diff_output != ''
+        uses: thollander/actions-comment-pull-request@v2.4.2
+        with:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          message: |
+            ## 🔄 [${{ env.CLUSTER_ENVIRONMENT }}] Loki Changes
+            <details>
+            <summary>Click to see the changes</summary>
+
+            ```diff
+            ${{ steps.loki.outputs.diff_output }}
+            ```
+            </details>
+      - name: LOKI - Helm upgrade install dry-run
+        if: steps.loki.outputs.has_changes == 'true'
+        run: |
+          helm upgrade --install -n infrastructure loki grafana/loki \
+            -f ${{ env.LOKI_FILE }} \
+            --version ${{ env.LOKI_CHART_VERSION }} \
+            --atomic --timeout ${{ env.HELM_CMD_TIMEOUT }} \
+            --dry-run --debug
+      - name: BLACKBOX_EXPORTER - Show file
+        run: |
+          cat ${{ env.BLACKBOX_EXPORTER_FILE }}
+      - name: BLACKBOX_EXPORTER - Helm diff
+        id: blackbox-exporter
+        run: |
+          DIFF_OUTPUT=$(helm diff upgrade -n infrastructure blackbox-exporter \
+            prometheus-community/prometheus-blackbox-exporter \
+            --values ${{ env.BLACKBOX_EXPORTER_FILE }} \
+            --version ${{ env.BLACKBOX_EXPORTER_CHART_VERSION }})
+          echo "$DIFF_OUTPUT"
+          echo "diff_output<<EOF" >> $GITHUB_OUTPUT
+          echo "$DIFF_OUTPUT" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+          # Check if there are changes
+          if [ -z "$DIFF_OUTPUT" ]; then
+            echo "has_changes=false" >> $GITHUB_OUTPUT
+            echo "No changes detected for Blackbox Exporter"
+          else
+            echo "has_changes=true" >> $GITHUB_OUTPUT
+            echo "Changes detected for Blackbox Exporter"
+          fi
+      - name: BLACKBOX_EXPORTER - Comment diff on PR
+        if: github.event_name == 'pull_request' && steps.blackbox-exporter.outcome == 'success' && steps.blackbox-exporter.outputs.diff_output != ''
+        uses: thollander/actions-comment-pull-request@v2.4.2
+        with:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          message: |
+            ## 🔄 [${{ env.CLUSTER_ENVIRONMENT }}] Blackbox Exporter Changes
+            <details>
+            <summary>Click to see the changes</summary>
+
+            ```diff
+            ${{ steps.blackbox-exporter.outputs.diff_output }}
+            ```
+            </details>
+      - name: BLACKBOX_EXPORTER - Helm upgrade install dry-run
+        if: steps.blackbox-exporter.outputs.has_changes == 'true'
+        run: |
+          helm upgrade --install -n infrastructure blackbox-exporter \
+            prometheus-community/prometheus-blackbox-exporter \
+            -f ${{ env.BLACKBOX_EXPORTER_FILE }} \
+            --version ${{ env.BLACKBOX_EXPORTER_CHART_VERSION }} \
+            --atomic --timeout ${{ env.HELM_CMD_TIMEOUT }} \
+            --dry-run --debug
+      - name: PROMTAIL - Show file
+        run: |
+          cat ${{ env.PROMTAIL_FILE }}
+      - name: PROMTAIL - Helm diff
+        id: promtail
+        run: |
+          DIFF_OUTPUT=$(helm diff upgrade -n infrastructure promtail \
+            grafana/promtail \
+            --values ${{ env.PROMTAIL_FILE }} \
+            --version ${{ env.PROMTAIL_CHART_VERSION }})
+          echo "$DIFF_OUTPUT"
+          echo "diff_output<<EOF" >> $GITHUB_OUTPUT
+          echo "$DIFF_OUTPUT" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+          # Check if there are changes
+          if [ -z "$DIFF_OUTPUT" ]; then
+            echo "has_changes=false" >> $GITHUB_OUTPUT
+            echo "No changes detected for Promtail"
+          else
+            echo "has_changes=true" >> $GITHUB_OUTPUT
+            echo "Changes detected for Promtail"
+          fi
+      - name: PROMTAIL - Comment diff on PR
+        if: github.event_name == 'pull_request' && steps.promtail.outcome == 'success' && steps.promtail.outputs.diff_output != ''
+        uses: thollander/actions-comment-pull-request@v2.4.2
+        with:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          message: |
+            ## 🔄 [${{ env.CLUSTER_ENVIRONMENT }}] Promtail Changes
+            <details>
+            <summary>Click to see the changes</summary>
+
+            ```diff
+            ${{ steps.promtail.outputs.diff_output }}
+            ```
+            </details>
+      - name: PROMTAIL - Helm upgrade install dry-run
+        if: steps.promtail.outputs.has_changes == 'true'
+        run: |
+          helm upgrade --install -n infrastructure promtail grafana/promtail \
+            -f ${{ env.PROMTAIL_FILE }} \
+            --version ${{ env.PROMTAIL_CHART_VERSION }} \
+            --atomic --timeout ${{ env.HELM_CMD_TIMEOUT }} \
+            --dry-run --debug
+      - name: PROMETHEUS_MSTEAMS - Env variables
+        run: |
+          sed -i "s~___ALERTMANAGER_INFRASTRUCTURE_CHANNEL_URL___~${{ env.ALERTMANAGER_INFRASTRUCTURE_CHANNEL_URL }}~g" ${{ env.PROMETHEUS_MSTEAMS_FILE }}
+      - name: PROMETHEUS_MSTEAMS - Show file
+        run: |
+          cat ${{ env.PROMETHEUS_MSTEAMS_FILE }}
+      - name: PROMETHEUS_MSTEAMS - Helm diff
+        id: prometheus-msteams
+        run: |
+          DIFF_OUTPUT=$(helm diff upgrade -n infrastructure prometheus-msteams \
+            prometheus-msteams/prometheus-msteams \
+            --values ${{ env.PROMETHEUS_MSTEAMS_FILE }} \
+            --version ${{ env.PROMETHEUS_MSTEAMS_CHART_VERSION }})
+          echo "$DIFF_OUTPUT"
+          echo "diff_output<<EOF" >> $GITHUB_OUTPUT
+          echo "$DIFF_OUTPUT" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+          # Check if there are changes
+          if [ -z "$DIFF_OUTPUT" ]; then
+            echo "has_changes=false" >> $GITHUB_OUTPUT
+            echo "No changes detected for Prometheus MSTeams"
+          else
+            echo "has_changes=true" >> $GITHUB_OUTPUT
+            echo "Changes detected for Prometheus MSTeams"
+          fi
+      - name: PROMETHEUS_MSTEAMS - Comment diff on PR
+        if: github.event_name == 'pull_request' && steps.prometheus-msteams.outcome == 'success' && steps.prometheus-msteams.outputs.diff_output != ''
+        uses: thollander/actions-comment-pull-request@v2.4.2
+        with:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          message: |
+            ## 🔄 [${{ env.CLUSTER_ENVIRONMENT }}] Prometheus MSTeams Changes
+            <details>
+            <summary>Click to see the changes</summary>
+
+            ```diff
+            ${{ steps.prometheus-msteams.outputs.diff_output }}
+            ```
+            </details>
+      - name: PROMETHEUS_MSTEAMS - Helm upgrade install dry-run
+        if: steps.prometheus-msteams.outputs.has_changes == 'true'
+        run: |
+          helm upgrade --install -n infrastructure prometheus-msteams \
+            prometheus-msteams/prometheus-msteams \
+            -f ${{ env.PROMETHEUS_MSTEAMS_FILE }} \
+            --version ${{ env.PROMETHEUS_MSTEAMS_CHART_VERSION }} \
+            --atomic --timeout ${{ env.HELM_CMD_TIMEOUT }} \
+            --dry-run --debug
+      - name: Deploy - Kube Prometheus Stack
+        if: github.event.inputs.deploy == 'true' && steps.kube-prometheus-stack.outputs.has_changes == 'true'
+        shell: bash
+        run: |
+          echo "Deploying Kube Prometheus Stack..."
+          helm upgrade --install -n infrastructure prometheus-grafana \
+            prometheus-community/kube-prometheus-stack \
+            -f ${{ env.KUBE_PROMETHEUS_STACK_FILE }} \
+            --version ${{ env.PROMETHEUS_GRAFANA_CHART_VERSION }} \
+            --atomic --timeout ${{ env.HELM_CMD_TIMEOUT }}
+          echo "Kube Prometheus Stack deployment completed."
+      - name: Deploy - Loki
+        if: github.event.inputs.deploy == 'true' && steps.loki.outputs.has_changes == 'true'
+        shell: bash
+        run: |
+          echo "Deploying Loki..."
+          helm upgrade --install -n infrastructure loki grafana/loki \
+            -f ${{ env.LOKI_FILE }} \
+            --version ${{ env.LOKI_CHART_VERSION }} \
+            --atomic --timeout ${{ env.HELM_CMD_TIMEOUT }}
+          echo "Loki deployment completed."
+      - name: Deploy - Blackbox Exporter
+        if: github.event.inputs.deploy == 'true' && steps.blackbox-exporter.outputs.has_changes == 'true'
+        shell: bash
+        run: |
+          echo "Deploying Blackbox Exporter..."
+          helm upgrade --install -n infrastructure blackbox-exporter \
+            prometheus-community/prometheus-blackbox-exporter \
+            -f ${{ env.BLACKBOX_EXPORTER_FILE }} \
+            --version ${{ env.BLACKBOX_EXPORTER_CHART_VERSION }} \
+            --atomic --timeout ${{ env.HELM_CMD_TIMEOUT }}
+          echo "Blackbox Exporter deployment completed."
+      - name: Deploy - Promtail
+        if: github.event.inputs.deploy == 'true' && steps.promtail.outputs.has_changes == 'true'
+        shell: bash
+        run: |
+          echo "Deploying Promtail..."
+          helm upgrade --install -n infrastructure promtail grafana/promtail \
+            -f ${{ env.PROMTAIL_FILE }} \
+            --version ${{ env.PROMTAIL_CHART_VERSION }} \
+            --atomic --timeout ${{ env.HELM_CMD_TIMEOUT }}
+          echo "Promtail deployment completed."
+      - name: Deploy - Prometheus MSTeams
+        if: github.event.inputs.deploy == 'true' && steps.prometheus-msteams.outputs.has_changes == 'true'
+        shell: bash
+        run: |
+          echo "Deploying Prometheus MSTeams..."
+          helm upgrade --install -n infrastructure prometheus-msteams \
+            prometheus-msteams/prometheus-msteams \
+            -f ${{ env.PROMETHEUS_MSTEAMS_FILE }} \
+            --version ${{ env.PROMETHEUS_MSTEAMS_CHART_VERSION }} \
+            --atomic --timeout ${{ env.HELM_CMD_TIMEOUT }}
+          echo "Prometheus MSTeams deployment completed."
+      - name: Show Kube Prometheus Stack history
+        if: github.event.inputs.deploy == 'true' && steps.kube-prometheus-stack.outputs.has_changes == 'true'
+        shell: bash
+        run: |
+          echo "Kube Prometheus Stack"
+          helm history -n infrastructure prometheus-grafana | head -1
+          helm history -n infrastructure prometheus-grafana | tail -2
+          echo
+      - name: Show Loki history
+        if: github.event.inputs.deploy == 'true' && steps.loki.outputs.has_changes == 'true'
+        shell: bash
+        run: |
+          echo "Loki"
+          helm history -n infrastructure loki | head -1
+          helm history -n infrastructure loki | tail -2
+          echo
+      - name: Show Blackbox Exporter history
+        if: github.event.inputs.deploy == 'true' && steps.blackbox-exporter.outputs.has_changes == 'true'
+        shell: bash
+        run: |
+          echo "Blackbox Exporter"
+          helm history -n infrastructure blackbox-exporter | head -1
+          helm history -n infrastructure blackbox-exporter | tail -2
+          echo
+      - name: Show Promtail history
+        if: github.event.inputs.deploy == 'true' && steps.promtail.outputs.has_changes == 'true'
+        shell: bash
+        run: |
+          echo "Promtail"
+          helm history -n infrastructure promtail | head -1
+          helm history -n infrastructure promtail | tail -2
+          echo
+      - name: Show Prometheus MSTeams history
+        if: github.event.inputs.deploy == 'true' && steps.prometheus-msteams.outputs.has_changes == 'true'
+        shell: bash
+        run: |
+          echo "Prometheus MSTeams"
+          helm history -n infrastructure prometheus-msteams | head -1
+          helm history -n infrastructure prometheus-msteams | tail -2
+          echo
+          echo "Done"
+...

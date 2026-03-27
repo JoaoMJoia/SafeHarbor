@@ -1,0 +1,152 @@
+# helm repo add grafana https://grafana.github.io/helm-charts
+# helm repo update
+# helm upgrade --install loki --namespace=infrastructure grafana/loki -f loki.yaml
+
+# source for config guidance: https://rtfm.co.ua/en/grafana-loki-architecture-and-running-in-kubernetes-with-aws-s3-storage-and-boltdb-shipper/
+# loki-stack is installing single binary (with local storage), loki - simple scalable (which works with S3)
+# Default values: https://github.com/grafana/loki/blob/main/production/helm/loki/values.yaml
+---
+# -- Specifies ServiceAccount to use
+serviceAccount:
+  create: true
+  annotations:
+    eks.amazonaws.com/role-arn: ___LOKI_ROLE___
+
+loki:
+  commonConfig:
+    replication_factor: 3
+  # Should authentication be enabled
+  auth_enabled: false
+  # -- Check https://grafana.com/docs/loki/latest/configuration/#schema_config for more info on how to configure schemas
+  # Configures the chunk index schema and where it is stored
+  schemaConfig:
+    configs:
+      - from: 2022-11-30
+        store: tsdb
+        object_store: s3
+        schema: v12
+        index:
+          prefix: tsdb_index_
+          period: 24h
+  # -- Storage config. Providing this will automatically populate all necessary storage configs in the templated config.
+  storage:
+    bucketNames:
+      chunks: ___LOKI_BUCKET_NAME___
+      ruler: ___LOKI_BUCKET_NAME___
+      admin: ___LOKI_BUCKET_NAME___
+    type: s3
+    s3:
+      s3: ___LOKI_S3_URL___
+      region: eu-west-1
+      s3ForcePathStyle: false
+      insecure: false
+  # -- Additional storage config
+  storage_config:
+    aws:
+      s3: ___LOKI_S3_URL___
+      s3forcepathstyle: false
+      bucketnames: ___LOKI_BUCKET_NAME___
+      region: eu-west-1
+      insecure: false
+      sse_encryption: false
+  # -- Check https://grafana.com/docs/loki/latest/configuration/#ruler for more info on configuring ruler
+  rulerConfig:
+    storage:
+      type: s3
+  persistence:
+    # -- Enable volume claims in pod spec
+    volumeClaimsEnabled: true
+    # -- Size of persistent disk
+    size: 10Gi
+    # -- Storage class to be used.
+    # If defined, storageClassName: <storageClass>.
+    # If set to "-", storageClassName: "", which disables dynamic provisioning.
+    # If empty or set to null, no storageClassName spec is
+    # set, choosing the default provisioner (gp2 on AWS, standard on GKE, AWS, and OpenStack).
+    storageClass: efs-sc
+  # -- Additional query scheduler config
+  query_scheduler:
+    max_outstanding_requests_per_tenant: 4096
+  frontend:
+    max_outstanding_per_tenant: 4096
+  limits_config:
+    split_queries_by_interval: 2h
+# -- Configuration for the single binary node(s)
+# single binary architecture enabled, simple-scalable disabled (write, read and backend replicas to 0)
+singleBinary:
+  replicas: 2
+  autoscaling:
+    enabled: false
+  # -- Node selector for single binary pods
+  nodeSelector:
+    node-role: "helper"
+  affinity: [ ]
+  persistence:
+    # -- Enable StatefulSetAutoDeletePVC feature
+    enableStatefulSetAutoDeletePVC: true
+    # -- Enable persistent disk
+    enabled: true
+    # -- Size of persistent disk
+    size: 10Gi
+    # -- Storage class to be used.
+    # If defined, storageClassName: <storageClass>.
+    # If set to "-", storageClassName: "", which disables dynamic provisioning.
+    # If empty or set to null, no storageClassName spec is
+    # set, choosing the default provisioner (gp2 on AWS, standard on GKE, AWS, and OpenStack).
+    storageClass: efs-sc
+  # -- Resource requests and limits for the single binary
+  resources:
+    requests:
+      cpu: 20m
+      memory: 100Mi
+# Configuration for the write pod(s)
+write:
+  replicas: 2
+# Configuration for the read pod(s)
+read:
+  replicas: 2
+  extraVolumeMounts:
+    - name: rules
+      mountPath: "/var/loki/rulestorage/fake"
+  extraVolumes:
+    - name: rules
+      configMap:
+        name: loki-alerting-rules
+# Configuration for the backend pod(s)
+backend:
+  replicas: 0
+# Configuration for the gateway
+gateway:
+  enabled: true
+  replicas: 1
+  autoscaling:
+    enabled: false
+  # Gateway service configuration
+  service:
+    type: NodePort
+    # -- (int) Node port if service type is NodePort
+    nodePort: 30200
+  nodeSelector:
+    node-role: "helper"
+  affinity: [ ]
+  # -- Resource requests and limits for the gateway
+  resources:
+    requests:
+      cpu: 1m
+      memory: 15Mi
+# Monitoring section determines which monitoring features to enable
+monitoring:
+  # Recording rules for monitoring Loki, required for some dashboards
+  rules:
+    # -- If enabled, create PrometheusRule resource with Loki recording rules
+    enabled: true
+    # -- Include alerting rules
+    alerting: true
+  # The Loki canary pushes logs to and queries from this loki installation to test
+  # that it's working correctly
+  lokiCanary:
+    enabled: false
+# -- Section for configuring optional Helm test
+test:
+  enabled: false
+...

@@ -1,0 +1,69 @@
+---
+# This workflow is used to lint the Helm chart.
+name: Helm Chart Lint
+
+on:
+  workflow_call:
+    inputs:
+      environment:
+        required: true
+        type: string
+      helm_chart_directory:
+        required: true
+        type: string
+        description: 'Directory containing the Helm chart'
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  lint:
+    name: 'Linting'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash
+        working-directory: ${{ inputs.helm_chart_directory }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Set appVersion for Chart.yaml based on package.json
+        run: |
+          export VERSION=$(jq -r .version ../package.json)
+          echo $VERSION
+          sed -i "s~1.0.0~$VERSION~g" ./Chart.yaml
+          grep appVersion Chart.yaml
+
+      - name: Set up Helm
+        uses: azure/setup-helm@v3
+        with:
+          version: v3.12.1
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: 3.13
+          check-latest: true
+
+      - name: Set up chart-testing
+        uses: helm/chart-testing-action@v2.6.0
+
+      - name: Run Template Validation
+        run: |
+          # Try to template with environment values
+          helm template . --generate-name -f values.yaml -f ${{ inputs.environment }}-values.yaml
+
+      - name: Run Lint
+        run: |
+          pwd
+          ls -la
+          ct version
+          echo "Current directory: $(pwd)"
+          echo "Chart.yaml contents:"
+          cat Chart.yaml
+          ct lint --config ../.github/ct.yaml --debug
+...

@@ -1,0 +1,248 @@
+## helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
+## helm repo update
+## helm install prometheus-grafana prometheus-community/kube-prometheus-stack -n infrastructure -f kube-prometheus.yaml
+
+## HELM HUB ARTIFACT: https://artifacthub.io/packages/helm/prometheus-community/kube-prometheus-stack
+## HELM Chart defaul values: https://github.com/prometheus-community/helm-charts/blob/main/charts/kube-prometheus-stack/values.yaml
+---
+## Override the deployment namespace
+namespaceOverride: "infrastructure"
+## Prometheus default rules
+defaultRules:
+  disabled:
+    ## EKS control plane nodes aren’t visible to Prometheus
+    KubeControllerManagerDown: true
+    ## EKS control plane nodes aren’t visible to Prometheus
+    KubeSchedulerDown: true
+## Grafana Configuration
+## Using default values from https://github.com/grafana/helm-charts/blob/main/charts/grafana/values.yaml
+grafana:
+  enabled: true
+  namespaceOverride: "infrastructure"
+  adminPassword: ___GRAFANA_PASSWORD___
+  service:
+    type: NodePort
+    nodePort: 30100
+  nodeSelector:
+    node-role: helper
+  resources:
+    requests:
+      cpu: 10m
+      memory: 90Mi
+  plugins:
+    - grafana-github-datasource
+  additionalDataSources:
+    - name: loki
+      type: loki
+      url: http://loki-gateway.infrastructure.svc.cluster.local
+    - name: CloudWatch
+      type: cloudwatch
+      jsonData:
+        authType: keys
+        defaultRegion: eu-west-1
+      secureJsonData:
+        accessKey: ___AWS_USER_GRAFANA_CLOUDWATCH_ACCESSKEY___
+        secretKey: ___AWS_USER_GRAFANA_CLOUDWATCH_SECRETKEY___
+    - name: GitHub
+      type: grafana-github-datasource
+      access: proxy
+      url: https://api.github.com
+      jsonData:
+        oauthPassThru: true
+        organization: ___GITHUB_ORGANIZATION___
+      secureJsonData:
+        accessToken: ___GITHUB_PAT___
+  ## assertNoLeakedSecrets is a helper function defined in _helpers.tpl that checks if secret
+  ## values are not exposed in the rendered grafana.ini configmap. It is enabled by default.
+  ##
+  ## To pass values into grafana.ini without exposing them in a configmap, use variable expansion:
+  ## https://grafana.com/docs/grafana/latest/setup-grafana/configure-grafana/#variable-expansion
+  assertNoLeakedSecrets: false
+  ## Grafana Alerting Configuration
+  alerting:
+    ## List how to notify when an alert instance fires
+    ## https://grafana-root_url/alerting/notifications
+    contactpoints.yaml:
+      apiVersion: 1
+      contactPoints:
+        - orgId: 1
+          name: ___GRAFANA_DEVELOPERS_MSTEAMS_CHANNEL_NAME___
+          receivers:
+            - uid: ___GRAFANA_DEVELOPERS_MSTEAMS_CHANNEL_UID___
+              type: teams
+              settings:
+                url: ___GRAFANA_DEVELOPERS_MSTEAMS_CHANNEL_URL___
+              disableResolveMessage: true
+        - orgId: 1
+          name: ___GRAFANA_INFRASTRUCTURE_CHANNEL_NAME___
+          receivers:
+            - uid: ___GRAFANA_INFRASTRUCTURE_CHANNEL_UID___
+              type: teams
+              settings:
+                url: ___GRAFANA_INFRASTRUCTURE_CHANNEL_URL___
+              disableResolveMessage: true
+    ## Determine how alerts are routed to contact points
+    ## https://grafana-root_url/alerting/routes
+    policies.yaml:
+      apiVersion: 1
+      policies:
+        - orgId: 1
+          receiver: ___GRAFANA_DEVELOPERS_MSTEAMS_CHANNEL_NAME___
+          group_by:
+            - alertname
+            - grafana_folder
+  ## Grafana's primary configuration
+  ## NOTE: values in map will be converted to ini format
+  ## ref: http://docs.grafana.org/installation/configuration/
+  grafana.ini:
+    server:
+      root_url: ___GRAFANA_URL___
+    ## Azure AD configuration
+    auth.azuread:
+      name: Azure AD
+      enabled: true
+      allow_sign_up: true
+      auto_login: true
+      client_id: ___AZURE_APP_ID___
+      client_secret: ___AZURE_APP_SECRET___
+      scopes: openid email profile offline_access
+      auth_url: 'https://login.microsoftonline.com/___AZURE_TENANT_ID___/oauth2/v2.0/authorize'
+      token_url: 'https://login.microsoftonline.com/___AZURE_TENANT_ID___/oauth2/v2.0/token'
+      allowed_organizations: ___AZURE_TENANT_ID___
+      role_attribute_strict: false
+      allow_assign_grafana_admin: false
+      skip_org_role_sync: false
+      use_pkce: true
+  ## Grafana sidecars are init containers in Grafana pod that scan your cluster for 
+  ## configmaps and secrets with dashboards and alerts configuration.
+  sidecar:
+    dashboards:
+      enabled: true
+      label: grafana_dashboard
+      labelValue: "1"
+      searchNamespace: ALL
+    alerts:
+      enabled: true
+      label: grafana_alert
+      labelValue: "1"
+      searchNamespace: ALL
+    datasources:
+      isDefaultDatasource: false
+    resources:
+      requests:
+        cpu: 10m
+        memory: 90Mi
+## Prometheus Configuration
+prometheus:
+  enabled: true
+  service:
+    type: NodePort
+    nodePort: 30300
+  prometheusSpec:
+    ## Using default values to enable additional rules using
+    ## apiVersion: monitoring.coreos.com/v1
+    ## kind: PrometheusRule
+    ruleSelector:
+      matchLabels:
+        release: "prometheus-grafana"
+    ## access the metrics from your Trivy Operator reports through Grafana
+    ## https://aquasecurity.github.io/trivy-operator/latest/tutorials/grafana-dashboard/
+    serviceMonitorSelectorNilUsesHelmValues: false
+    serviceMonitorSelector: { }
+    serviceMonitorNamespaceSelector: { }
+    ## error="scrapeTimeout \"30s\" greater than scrapeInterval \"10s\""
+    scrapeInterval: "30s"
+    additionalScrapeConfigs:
+      ## Getting exposed /metrics from cluster-autoscaler
+      - job_name: 'cluster-autoscaler'
+        kubernetes_sd_configs:
+          - role: pod
+        relabel_configs:
+          - source_labels: [__meta_kubernetes_pod_container_name]
+            regex: 'cluster-autoscaler'
+            action: keep
+    nodeSelector:
+      node-role: helper
+    resources:
+      requests:
+        cpu: 500m
+        memory: 950Mi
+    storageSpec:
+      volumeClaimTemplate:
+        spec:
+          storageClassName: efs-sc
+          accessModes: ["ReadWriteOnce"]
+          resources:
+            requests:
+              storage: 10Gi
+    externalUrl: ___PROMETHEUS_URL___
+    enableRemoteWriteReceiver: true
+    remoteWriteDashboards: true
+    retention: 3d
+    retentionSize: 500MiB
+    disableCompaction: true
+## AlertManager Configuration
+alertmanager:
+  enabled: true
+  alertmanagerSpec:
+    nodeSelector:
+      node-role: helper
+    resources:
+      requests:
+        memory: 40M
+        cpu: 20m
+      limits:
+        memory: 100M
+  config:
+    route:
+      ## Need pre default receiver 'null'
+      receiver: 'null'
+      ## Group related alerts into one alert
+      group_by: ['namespace']
+      ## How long to initially wait to send a notification for a group
+      ## of alerts. Allows to wait for an inhibiting alert to arrive or collect
+      ## more initial alerts for the same group. (Usually ~0s to few minutes.)
+      group_wait: 30s
+      ## How long to wait before sending a notification about new alerts that
+      ## are added to a group of alerts for which an initial notification has
+      ## already been sent. (Usually ~5m or more.)
+      group_interval: 5m
+      ## How long to wait before sending a notification again if it has already
+      ## been sent successfully for an alert. (Usually ~3h or more).
+      repeat_interval: 6h
+      routes:
+        - receiver: ___ALERTMANAGER_INFRASTRUCTURE_CHANNEL_NAME___
+          matchers:
+            - alertname = "Watchdog"
+        - receiver: ___ALERTMANAGER_INFRASTRUCTURE_CHANNEL_NAME___
+          matchers:
+            - severity =~ "critical|warning"
+        ## Locally test send alert
+        ## kubectl port-forward svc/prometheus-grafana-kube-pr-alertmanager -n infrastructure 9093:9093
+        ## New terminal
+        ## curl -H 'Content-Type: application/json' -d '[{"labels":{"alertname":"testsendalert"}}]' http://127.0.0.1:9093/api/v2/alerts
+        - receiver: ___ALERTMANAGER_INFRASTRUCTURE_CHANNEL_NAME___
+          matchers:
+            - alertname = "testsendalert"
+    ## List how to notify when an alert instance fires
+    receivers:
+      ## Need pre default receiver 'null'
+      - name: 'null'
+      ## Infrastructure Alerts Channel
+      - name: ___ALERTMANAGER_INFRASTRUCTURE_CHANNEL_NAME___
+        # Webhook from prometheus-msteams helm chart connector configuration
+        webhook_configs:
+          - url: http://prometheus-msteams:2000/infrastructure
+            send_resolved: true
+    templates:
+      - "/etc/alertmanager/config/*.tmpl"
+## Prometheus Operator automates the management of Prometheus and Alertmanager 
+## instances, easing deployment and configuration in Kubernetes.
+prometheusOperator:
+  nodeSelector:
+    node-role: helper
+  resources:
+    requests:
+      cpu: 2m
+      memory: 50Mi
+...

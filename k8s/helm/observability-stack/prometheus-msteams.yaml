@@ -1,0 +1,19 @@
+---
+# Prometheus MSTeams Helm Chart configuration
+## helm repo add prometheus-msteams https://prometheus-msteams.github.io/prometheus-msteams/
+## helm repo update
+## helm upgrade --install -n infrastructure prometheus-msteams prometheus-msteams/prometheus-msteams -f ./prometheus-msteams.yaml --version "~1.3.4" --atomic --timeout 5m --debug
+
+## HELM HUB ARTIFACT: https://artifacthub.io/packages/helm/prometheus-msteams/prometheus-msteams
+
+# Connectors Configuration
+connectors:
+  # In kube-prometheus-stack alertmanager configuration
+  # this will be used as http://prometheus-msteams:2000/infrastructure
+  - infrastructure: ___MS_TEAMS_CHANNEL_WEBHOOK_URL___
+
+# Enable metrics for prometheus operator
+metrics:
+  serviceMonitor:
+    enabled: true
+...

@@ -1,0 +1,49 @@
+---
+# Prometheus Blackbox Exporter Helm Chart configuration
+## helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
+## helm repo update
+## helm upgrade --install -n infrastructure blackbox-exporter prometheus-community/prometheus-blackbox-exporter -f ./blackbox-exporter.yaml --version "~9.1.0" --atomic --timeout 5m --debug
+
+## HELM HUB ARTIFACT: https://artifacthub.io/packages/helm/prometheus-community/prometheus-blackbox-exporter
+##
+## Scraping of the servicemonitor with kube-prometheus-stack works out of the box
+releaseLabel: true
+
+# Blackbox Exporter settings
+config:
+  modules:
+    http_2xx:
+      prober: http
+      timeout: 5s
+      http:
+        valid_http_versions: ["HTTP/1.1", "HTTP/2.0"]
+        follow_redirects: true
+        preferred_ip_protocol: "ip4"
+
+# Targets to monitor
+serviceMonitor:
+  enabled: true
+  defaults:
+    interval: 30s
+    scrapeTimeout: 10s
+    module: http_2xx
+  targets:
+    - name: production-app
+      url: https://example.com/
+      labels:
+        environment: production
+    - name: dev-app
+      url: https://dev.example.com/
+      labels:
+        environment: dev
+
+
+# Pod settings
+resources:
+  limits:
+    memory: 300Mi
+    cpu: 200m
+  requests:
+    memory: 50Mi
+    cpu: 50m
+...

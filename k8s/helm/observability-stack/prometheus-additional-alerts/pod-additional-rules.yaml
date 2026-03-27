@@ -1,0 +1,49 @@
+---
+# Additional Pod Alerts
+# This file contains additional alerts for pods in the cluster.
+# These alerts are not part of the default rules and are added to the PrometheusRule object.
+# Should be on same namespace as the prometheus-grafana deployment.
+## kubectl apply -n monitoring -f pod-additional-rules.yaml
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  namespace: infrastructure
+  name: pod-additional
+  labels:
+    release: "prometheus-grafana"
+spec:
+  groups:
+    - name: pod-additional-alerts
+      rules:
+        # Pod CPU
+        - alert: HighPodCPUUsage
+          expr: rate(container_cpu_usage_seconds_total{namespace!="kube-system", pod!=""}[5m]) > 0.8
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Pod {{ $labels.pod }} in {{ $labels.namespace }} has high CPU usage"
+            description: "CPU usage is above 80% for the past 5 minutes."
+
+        # Pod Memory
+        - alert: HighPodMemoryUsage
+          expr: container_memory_usage_bytes{namespace!="kube-system", pod!=""} 
+                / ignoring(resource) kube_pod_container_resource_limits{namespace!="kube-system", pod!="", resource="memory"} > 0.8
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Pod {{ $labels.pod }} in {{ $labels.namespace }} has high memory usage"
+            description: "Memory usage is above 90% of the memory limit for the past 5 minutes."
+
+        # Pod Restarted
+        - alert: PodRestartingFrequently
+          expr: increase(kube_pod_container_status_restarts_total{namespace!="kube-system", pod!=""}[5m]) > 3
+          for: 10m
+          labels:
+            severity: critical
+          annotations:
+            summary: "Pod {{ $labels.pod }} in {{ $labels.namespace }} is restarting frequently"
+            description: "Pod restarted more than 3 times in the last 10 minutes."
+
+...
