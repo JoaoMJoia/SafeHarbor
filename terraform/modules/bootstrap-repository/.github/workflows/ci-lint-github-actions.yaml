@@ -1,0 +1,21 @@
+---
+name: CI - Lint Github Actions
+
+on:
+  pull_request:
+    branches:
+      - "main"
+    paths:
+      - ".github/**"
+
+permissions:
+  contents: read
+  packages: read
+  statuses: write
+
+jobs:
+  lint:
+    uses:
+      emergn-infinity/pipelines/.github/workflows/super-linter-github-actions.yaml@main
+    secrets: inherit
+...

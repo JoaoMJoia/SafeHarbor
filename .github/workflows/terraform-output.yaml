@@ -1,0 +1,57 @@
+---
+# This workflow is used to output the Terraform infrastructure.
+name: "Terraform Output Infrastructure"
+
+on:
+  workflow_dispatch:
+    inputs:
+      folder:
+        description: "Folder to output"
+        required: true
+        default: "terraform"
+        type: choice
+        options:
+          - terraform
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  AWS_REGION: ${{ vars.AWS_REGION }}
+  ROLE_TO_ASSUME: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/github-actions-terraform
+  TF_VERSION: 1.14.5
+
+jobs:
+  output:
+    name: 'Output ${{ inputs.folder }}'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash
+        working-directory: ${{ inputs.folder }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials via OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ env.ROLE_TO_ASSUME }}
+          aws-region: ${{ env.AWS_REGION }}
+      
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+
+      - name: Terraform Init
+        id: init
+        run: |
+          terraform init -upgrade
+
+      - name: Terraform Output
+        id: output
+        run: terraform output
+...

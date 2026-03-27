@@ -1,0 +1,18 @@
+---
+name: Tagging Retention Policy 
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '10 10 1 * *'  # Run at 10:10 AM on the 1st day of every month
+
+jobs:
+  tag-retention-policy:
+    uses:
+      emergn-infinity/pipelines/.github/workflows/tag-retention-policy.yaml@main
+    with:
+      dry-run: false
+      versioning-scheme: major
+      ms-teams-webhook-uri: ${{ vars.MS_TEAMS_CHANNEL_PROD_INFRASTRUCTURE_ALERTS }}
+    secrets: inherit
+...

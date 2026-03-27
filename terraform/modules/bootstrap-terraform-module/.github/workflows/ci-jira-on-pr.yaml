@@ -1,0 +1,21 @@
+---
+name: CI - Update PR body
+
+on:
+  pull_request:
+    types: 
+      - opened
+
+permissions:
+  contents: read
+  actions: read
+  checks: write
+  pull-requests: write
+  id-token: write
+
+jobs:
+  update-pr:
+    uses:
+      emergn-infinity/pipelines/.github/workflows/jira_on_pr.yaml@main
+    secrets: inherit
+...

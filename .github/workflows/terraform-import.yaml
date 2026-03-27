@@ -1,0 +1,67 @@
+---
+# This workflow is used to import the Terraform infrastructure.
+name: "Terraform Import Infrastructure"
+
+on:
+  workflow_dispatch:
+    inputs:
+      folder:
+        description: "Folder to import"
+        required: true
+        default: "terraform"
+        type: choice
+        options:
+          - terraform
+      resource_address:
+        description: "Resource address to import"
+        default: "module.example.aws_instance.foo or aws_instance.foo"
+        required: true
+        type: string
+      resource_import_id:
+        description: "Resource import ID"
+        default: "i-abcd1234"
+        required: true
+        type: string
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  AWS_REGION: ${{ vars.AWS_REGION }}
+  ROLE_TO_ASSUME: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/github-actions-terraform
+  TF_VERSION: 1.14.5
+
+jobs:
+  import:
+    name: 'Import ${{ inputs.resource_address }} on ${{ inputs.folder }}'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash
+        working-directory: ${{ inputs.folder }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials via OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ env.ROLE_TO_ASSUME }}
+          aws-region: ${{ env.AWS_REGION }}
+      
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+
+      - name: Terraform Init
+        id: init
+        run: |
+          terraform init -upgrade
+
+      - name: Terraform import ${{ inputs.resource_address }} ${{ inputs.resource_import_id }}
+        id: import
+        run: terraform import '${{ inputs.resource_address }}' '${{ inputs.resource_import_id }}'
+...

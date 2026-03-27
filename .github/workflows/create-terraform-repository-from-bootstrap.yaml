@@ -1,0 +1,367 @@
+---
+# This workflow is used to create a new Terraform repository from the bootstrap repository template.
+name: Create Terraform repository from bootstrap repository template
+
+on:
+  workflow_dispatch:
+    inputs:
+      new_repo_name:
+        description: 'Name of the new terraform repository'
+        required: true
+        type: string
+        default: 'dummy-terraform-repo'
+      description:
+        description: 'Terraform repository description'
+        required: false
+        default: 'Created from bootstrap repository'
+        type: string
+      template_repo_name:
+        description: 'Template repository to use'
+        required: true
+        type: choice
+        default: bootstrap-terraform-module
+        options:
+          - bootstrap-terraform-module
+          - bootstrap-repository
+      ticket:
+        description: 'Jira Ticket'
+        required: true
+        type: string
+        default: 'DUMMY-123'
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  TRIGGER_WORKFLOW: ${{ secrets.TRIGGER_WORKFLOW }}
+  TF_VERSION: 1.14.5
+  GITHUB_TOKEN: ${{ secrets.TF_MANAGE_GITHUB_TOKEN }}
+  AWS_REGION: ${{ vars.AWS_REGION }}
+  ROLE-TO-ASSUME: arn:aws:iam::${{ secrets.AWS_ORG_ACCOUNT }}:role/github-example
+  NOTIFY_CHANNEL: ${{ vars.TEAMS_WEBHOOK_EXAMPLE_URL }}
+  TARGET_GITHUB_ORG: dummy-org
+  BOOTSTRAP_MODULES_DIR: terraform/modules
+  DUMMY_ADMIN_TEAM: dummy-admins
+  DUMMY_SECONDARY_ADMIN_TEAM: dummy-platform-admins
+  NEW_REPO_NAME: ${{ github.event.inputs.new_repo_name }}
+  REPO_DESCRIPTION: ${{ github.event.inputs.description }}
+  TEMPLATE_REPO_NAME: ${{ github.event.inputs.template_repo_name }}
+  TICKET: ${{ github.event.inputs.ticket }}
+
+jobs:
+  create-repo:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Login to AWS
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ env.ROLE-TO-ASSUME }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: List directory contents
+        run: |
+          echo "=== Current Directory Contents ==="
+          pwd
+          ls -lhtar
+          echo "=== ${{ env.BOOTSTRAP_MODULES_DIR }} Directory Contents ==="
+          ls -lhtar "${{ env.BOOTSTRAP_MODULES_DIR }}" || echo "Directory does not exist yet"
+
+      - name: Check if repository exists
+        id: check_repo
+        run: |
+          response=$(curl -s -o /dev/null -w "%{http_code}" \
+            -H "Authorization: token ${{ env.TRIGGER_WORKFLOW }}" \
+            -H "Accept: application/vnd.github+json" \
+            https://api.github.com/repos/${{ env.TARGET_GITHUB_ORG }}/${{ env.NEW_REPO_NAME }})
+          
+          if [ "$response" = "200" ]; then
+            echo "Repository already exists"
+            echo "exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "Repository does not exist"
+            echo "exists=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Create repository from template
+        if: steps.check_repo.outputs.exists == 'false'
+        run: |
+          curl -X POST \
+            -H "Authorization: token ${{ env.TRIGGER_WORKFLOW }}" \
+            -H "Accept: application/vnd.github+json" \
+            https://api.github.com/repos/${{ env.TARGET_GITHUB_ORG }}/${{ env.TEMPLATE_REPO_NAME }}/generate \
+            -d @- <<EOF
+          {
+            "owner": "${{ env.TARGET_GITHUB_ORG }}",
+            "name": "${{ env.NEW_REPO_NAME }}",
+            "description": "${{ env.REPO_DESCRIPTION }}",
+            "include_all_branches": false,
+            "private": true
+          }
+          EOF
+
+      - name: Check if Terraform configuration exists
+        id: check_tf
+        run: |
+          if [ -f "${{ env.BOOTSTRAP_MODULES_DIR }}/${{ env.NEW_REPO_NAME }}.tf" ]; then
+            echo "Terraform configuration already exists"
+            echo "exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "Terraform configuration does not exist"
+            echo "exists=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Get latest release tag from terraform-module-github
+        id: get_latest_tag
+        run: |
+          LATEST_TAG=$(curl -s \
+            -H "Authorization: token ${{ env.TRIGGER_WORKFLOW }}" \
+            -H "Accept: application/vnd.github+json" \
+            https://api.github.com/repos/${{ env.TARGET_GITHUB_ORG }}/terraform-module-github/releases/latest | jq -r '.tag_name')
+          echo "tag=$LATEST_TAG" >> $GITHUB_OUTPUT
+          echo "Latest tag: $LATEST_TAG"
+
+      - name: Create Terraform configuration file
+        if: steps.check_tf.outputs.exists == 'false'
+        run: |
+          echo 'module "${{ env.NEW_REPO_NAME }}" {' > ${{ env.BOOTSTRAP_MODULES_DIR }}/${{ env.NEW_REPO_NAME }}.tf
+          echo '  source = "git::https://github.com/${{ env.TARGET_GITHUB_ORG }}/terraform-module-github.git//repository?ref=${{ steps.get_latest_tag.outputs.tag }}"' >> ${{ env.BOOTSTRAP_MODULES_DIR }}/${{ env.NEW_REPO_NAME }}.tf
+          echo '' >> ${{ env.BOOTSTRAP_MODULES_DIR }}/${{ env.NEW_REPO_NAME }}.tf
+          echo '  name        = "${{ env.NEW_REPO_NAME }}"' >> ${{ env.BOOTSTRAP_MODULES_DIR }}/${{ env.NEW_REPO_NAME }}.tf
+          echo '  description = "${{ env.REPO_DESCRIPTION }}"' >> ${{ env.BOOTSTRAP_MODULES_DIR }}/${{ env.NEW_REPO_NAME }}.tf
+          echo '  template = {' >> ${{ env.BOOTSTRAP_MODULES_DIR }}/${{ env.NEW_REPO_NAME }}.tf
+          echo '    include_all_branches = false' >> ${{ env.BOOTSTRAP_MODULES_DIR }}/${{ env.NEW_REPO_NAME }}.tf
+          echo '    owner                = "${{ env.TARGET_GITHUB_ORG }}"' >> ${{ env.BOOTSTRAP_MODULES_DIR }}/${{ env.NEW_REPO_NAME }}.tf
+          echo '    repository           = "${{ env.TEMPLATE_REPO_NAME }}"' >> ${{ env.BOOTSTRAP_MODULES_DIR }}/${{ env.NEW_REPO_NAME }}.tf
+          echo '  }' >> ${{ env.BOOTSTRAP_MODULES_DIR }}/${{ env.NEW_REPO_NAME }}.tf
+          echo '' >> ${{ env.BOOTSTRAP_MODULES_DIR }}/${{ env.NEW_REPO_NAME }}.tf
+          echo '  branches = [' >> ${{ env.BOOTSTRAP_MODULES_DIR }}/${{ env.NEW_REPO_NAME }}.tf
+          echo '    {' >> ${{ env.BOOTSTRAP_MODULES_DIR }}/${{ env.NEW_REPO_NAME }}.tf
+          echo '      branch = "main"' >> ${{ env.BOOTSTRAP_MODULES_DIR }}/${{ env.NEW_REPO_NAME }}.tf
+          echo '      force_push_bypassers = [' >> ${{ env.BOOTSTRAP_MODULES_DIR }}/${{ env.NEW_REPO_NAME }}.tf
+          echo '        "${{ env.TARGET_GITHUB_ORG }}/${{ env.DUMMY_ADMIN_TEAM }}",' >> ${{ env.BOOTSTRAP_MODULES_DIR }}/${{ env.NEW_REPO_NAME }}.tf
+          echo '      ]' >> ${{ env.BOOTSTRAP_MODULES_DIR }}/${{ env.NEW_REPO_NAME }}.tf
+          echo '      allows_deletions = true' >> ${{ env.BOOTSTRAP_MODULES_DIR }}/${{ env.NEW_REPO_NAME }}.tf
+          echo '    }' >> ${{ env.BOOTSTRAP_MODULES_DIR }}/${{ env.NEW_REPO_NAME }}.tf
+          echo '  ]' >> ${{ env.BOOTSTRAP_MODULES_DIR }}/${{ env.NEW_REPO_NAME }}.tf
+          echo '  teams = [' >> ${{ env.BOOTSTRAP_MODULES_DIR }}/${{ env.NEW_REPO_NAME }}.tf
+          echo '    {' >> ${{ env.BOOTSTRAP_MODULES_DIR }}/${{ env.NEW_REPO_NAME }}.tf
+          echo '      permission = "admin"' >> ${{ env.BOOTSTRAP_MODULES_DIR }}/${{ env.NEW_REPO_NAME }}.tf
+          echo '      team_id    = "${{ env.DUMMY_ADMIN_TEAM }}"' >> ${{ env.BOOTSTRAP_MODULES_DIR }}/${{ env.NEW_REPO_NAME }}.tf
+          echo '    },' >> ${{ env.BOOTSTRAP_MODULES_DIR }}/${{ env.NEW_REPO_NAME }}.tf
+          echo '    {' >> ${{ env.BOOTSTRAP_MODULES_DIR }}/${{ env.NEW_REPO_NAME }}.tf
+          echo '      permission = "admin"' >> ${{ env.BOOTSTRAP_MODULES_DIR }}/${{ env.NEW_REPO_NAME }}.tf
+          echo '      team_id    = "${{ env.DUMMY_SECONDARY_ADMIN_TEAM }}"' >> ${{ env.BOOTSTRAP_MODULES_DIR }}/${{ env.NEW_REPO_NAME }}.tf
+          echo '    }' >> ${{ env.BOOTSTRAP_MODULES_DIR }}/${{ env.NEW_REPO_NAME }}.tf
+          echo '  ]' >> ${{ env.BOOTSTRAP_MODULES_DIR }}/${{ env.NEW_REPO_NAME }}.tf
+          echo '}' >> ${{ env.BOOTSTRAP_MODULES_DIR }}/${{ env.NEW_REPO_NAME }}.tf
+
+      - name: Display Terraform configuration
+        run: |
+          echo "=== Terraform Configuration File ==="
+          echo "File: ${{ env.BOOTSTRAP_MODULES_DIR }}/${{ env.NEW_REPO_NAME }}.tf"
+          echo "==================================="
+          cat ${{ env.BOOTSTRAP_MODULES_DIR }}/${{ env.NEW_REPO_NAME }}.tf
+          echo "==================================="
+
+      - name: Configure Git credentials for private module access
+        run: |
+          git config --global url."https://x-access-token:${{ env.GITHUB_TOKEN }}@github.com/".insteadOf "https://github.com/"
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+
+      - name: Terraform Init
+        id: init
+        run: |
+          cd ${{ env.BOOTSTRAP_MODULES_DIR }}
+          terraform init -upgrade -no-color
+
+      - name: Check Terraform State
+        id: check_state
+        run: |
+          cd ${{ env.BOOTSTRAP_MODULES_DIR }}
+          echo "=== Checking Terraform State for Resources ==="
+          echo "Checking for module.${{ env.NEW_REPO_NAME }} resources..."
+          
+          # Define expected resources
+          expected_resources=(
+            "module.${{ env.NEW_REPO_NAME }}.github_branch.repo_branches[\"main\"]"
+            "module.${{ env.NEW_REPO_NAME }}.github_branch_default.branch_default"
+            "module.${{ env.NEW_REPO_NAME }}.github_branch_protection.branch_protection[\"main\"]"
+            "module.${{ env.NEW_REPO_NAME }}.github_repository.repository"
+            "module.${{ env.NEW_REPO_NAME }}.github_repository_collaborators.repository_collaborators"
+            "module.${{ env.NEW_REPO_NAME }}.github_repository_dependabot_security_updates.repository_dependabot_security_updates"
+          )
+          
+          # Count expected resources
+          expected_count=${#expected_resources[@]}
+          
+          # Get current state list and count matching resources
+          state_list=$(terraform state list | grep "${{ env.NEW_REPO_NAME }}" || true)
+          found_resources=$(echo "$state_list" | grep -c "^" || echo "0")
+          
+          echo "Expected resources ($expected_count):"
+          printf '%s\n' "${expected_resources[@]}"
+          echo ""
+          echo "Found resources ($found_resources):"
+          echo "$state_list"
+          echo "=========================================="
+          
+          if [ "$found_resources" -eq "$expected_count" ]; then
+            echo "All resources found in state."
+            echo "missing=false" >> $GITHUB_OUTPUT
+          else
+            echo "Found $((expected_count - found_resources)) missing resources."
+            echo "missing=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Determine Workflow Continuation
+        id: workflow_continuation
+        run: |
+          if [ "${{ steps.check_tf.outputs.exists }}" = "true" ] && [ "${{ steps.check_state.outputs.missing }}" = "false" ]; then
+            echo "HCL file exists and all resources are in state. Exiting workflow."
+            exit 0
+          else
+            echo "Continuing workflow:"
+            echo "- HCL file exists: ${{ steps.check_tf.outputs.exists }}"
+            echo "- Resources missing: ${{ steps.check_state.outputs.missing }}"
+          fi
+
+      - name: Terraform Validate
+        id: validate
+        run: |
+          cd ${{ env.BOOTSTRAP_MODULES_DIR }}
+          terraform validate -no-color
+
+      - name: Terraform Plan
+        id: plan
+        run: |
+          cd ${{ env.BOOTSTRAP_MODULES_DIR }}
+          terraform plan -no-color -input=false -out=plan.tfplan > plan_output.txt
+
+      - name: Display Plan Output
+        run: |
+          echo "🔍 Terraform Plan Output:"
+          echo "----------------------------------------"
+          cat ${{ env.BOOTSTRAP_MODULES_DIR }}/plan_output.txt
+          echo "----------------------------------------"
+
+      - name: Import Missing Resources
+        if: steps.check_state.outputs.missing == 'true'
+        run: |
+          cd ${{ env.BOOTSTRAP_MODULES_DIR }}
+          echo "=== Importing Missing Resources ==="
+          
+          # Import the main repository
+          echo "Importing repository..."
+          terraform import module.${{ env.NEW_REPO_NAME }}.github_repository.repository ${{ env.NEW_REPO_NAME }}
+          
+          # Import the main branch
+          echo "Importing main branch..."
+          terraform import module.${{ env.NEW_REPO_NAME }}.github_branch.repo_branches[\"main\"] ${{ env.NEW_REPO_NAME }}:main
+          
+          # Import the default branch configuration
+          echo "Importing default branch configuration..."
+          terraform import module.${{ env.NEW_REPO_NAME }}.github_branch_default.branch_default ${{ env.NEW_REPO_NAME }}
+          
+          # Import the repository collaborators (teams)
+          echo "Importing repository collaborators..."
+          terraform import module.${{ env.NEW_REPO_NAME }}.github_repository_collaborators.repository_collaborators ${{ env.NEW_REPO_NAME }}
+          
+          # Import the Dependabot security updates configuration
+          echo "Importing Dependabot security updates..."
+          terraform import module.${{ env.NEW_REPO_NAME }}.github_repository_dependabot_security_updates.repository_dependabot_security_updates ${{ env.NEW_REPO_NAME }}
+          
+          echo "=========================================="
+
+      - name: Apply Branch Protection
+        if: steps.check_state.outputs.missing == 'true'
+        run: |
+          cd ${{ env.BOOTSTRAP_MODULES_DIR }}
+          echo "=== Applying Branch Protection ==="
+          terraform apply -auto-approve -target=module.${{ env.NEW_REPO_NAME }}.github_branch_protection.branch_protection[\"main\"]
+          echo "=========================================="
+
+      - name: Check for Existing Pull Request
+        id: check_existing_pr
+        if: steps.check_tf.outputs.exists == 'false'
+        uses: actions/github-script@v7.0.1
+        with:
+          github-token: ${{ github.token }}
+          script: |
+            const { owner, repo } = context.repo;
+            const branchName = 'chore/${{ env.TICKET }}-add-${{ env.NEW_REPO_NAME }}-terraform';
+            
+            try {
+              const pulls = await github.rest.pulls.list({
+                owner,
+                repo,
+                state: 'open',
+                head: `${owner}:${branchName}`
+              });
+              
+              if (pulls.data.length > 0) {
+                console.log(`Found existing PR #${pulls.data[0].number}`);
+                core.setOutput('pr-number', pulls.data[0].number);
+                core.setOutput('exists', 'true');
+              } else {
+                console.log('No existing PR found');
+                core.setOutput('exists', 'false');
+              }
+            } catch (error) {
+              console.error('Error checking for existing PR:', error.message);
+              core.setFailed(error.message);
+            }
+
+      - name: Create Pull Request
+        id: create_pr
+        if: steps.check_tf.outputs.exists == 'false' && steps.check_existing_pr.outputs.exists != 'true'
+        uses: peter-evans/create-pull-request@v7.0.5
+        with:
+          token: ${{ github.token }}
+          author: 'github-actions[bot] <github-actions[bot]@users.noreply.github.com>'
+          base: main
+          branch: 'chore/${{ env.TICKET }}-add-${{ env.NEW_REPO_NAME }}-terraform'
+          title: 'chore(${{ env.TICKET }}): add Terraform configuration for ${{ env.NEW_REPO_NAME }}'
+          body: |
+            This PR adds Terraform configuration for the new repository `${{ env.NEW_REPO_NAME }}`.
+            
+            Changes include:
+            - Added Terraform module configuration
+            - Configured repository settings
+            - Set up branch protection rules
+            - Added team access
+          committer: 'github-actions[bot] <github-actions[bot]@users.noreply.github.com>'
+          commit-message: 'chore(${{ env.TICKET }}): add Terraform configuration for ${{ env.NEW_REPO_NAME }}'
+          add-paths: |
+            ${{ env.BOOTSTRAP_MODULES_DIR }}/${{ env.NEW_REPO_NAME }}.tf
+            ${{ env.BOOTSTRAP_MODULES_DIR }}/.terraform.lock.hcl
+
+      - name: Merge Pull Request
+        if: (steps.check_tf.outputs.exists == 'false' && steps.create_pr.outputs.pull-request-number != '') || (steps.check_tf.outputs.exists == 'false' && steps.check_existing_pr.outputs.exists == 'true')
+        id: merge_pr
+        uses: juliangruber/merge-pull-request-action@v1.3.1
+        with:
+          github-token: ${{ github.token }}
+          number: ${{ steps.create_pr.outputs.pull-request-number || steps.check_existing_pr.outputs.pr-number }}
+          method: squash
+
+      - name: Show repository URL
+        run: |
+          echo "Repository URL: https://github.com/${{ env.TARGET_GITHUB_ORG }}/${{ env.NEW_REPO_NAME }}"
+
+      - name: Send notification
+        uses: jdcargile/ms-teams-notification@v1.4
+        with:
+          github-token: ${{ github.token }}
+          ms-teams-webhook-uri: ${{ env.NOTIFY_CHANNEL }}
+          notification-color: '#0078D4'
+          notification-summary: |
+            https://github.com/${{ env.TARGET_GITHUB_ORG }}/${{ env.NEW_REPO_NAME }}
+            ${{ steps.check_tf.outputs.exists == 'true' && 'Repository already exists' || 'New repository created' }}
+...

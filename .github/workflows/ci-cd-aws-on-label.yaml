@@ -1,0 +1,27 @@
+---
+# This workflow is used to run the CI/CD pipeline for the AWS infrastructure on label.
+name: 'AWS CI/CD on label'
+on:
+  pull_request:
+    types: ['labeled', 'opened', 'synchronize']
+    paths:
+      - "terraform/**"
+  workflow_dispatch:
+
+jobs:
+  ci:
+    uses: emergn-infinity/pipelines/.github/workflows/terraform-ci.yaml@main
+    with:
+      terraform-folder: terraform
+      tf-version: 1.13.1
+    secrets: inherit
+  
+  cd:
+    if: github.event_name == 'pull_request' && github.event.action == 'labeled'
+    uses: emergn-infinity/pipelines/.github/workflows/terraform-cd.yaml@main
+    with:
+      terraform-folder: terraform
+      label-to-apply: terraform
+      tf-version: 1.13.1
+    secrets: inherit
+...

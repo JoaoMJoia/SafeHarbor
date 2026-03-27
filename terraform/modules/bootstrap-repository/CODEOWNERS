@@ -1,0 +1,4 @@
+# Specify folder user code owner.
+
+# Example:
+#.github/ @{GitHub-Username}

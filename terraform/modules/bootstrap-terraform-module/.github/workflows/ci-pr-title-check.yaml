@@ -1,0 +1,17 @@
+---
+name: CI - PR Title Check
+
+on:
+  pull_request:
+    types: [opened, edited, synchronize]
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  pr-title-check:
+    uses:
+      emergn-infinity/pipelines/.github/workflows/pr-title-format.yaml@main
+    secrets: inherit
+...

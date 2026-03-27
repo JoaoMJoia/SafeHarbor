@@ -1,0 +1,28 @@
+---
+name: GitHub release
+
+on:
+  pull_request:
+    branches:
+      - main
+    types:
+      - closed
+    paths-ignore:
+      - '.github/**'
+      - 'example/**'
+      - 'CODEOWNERS'
+      - 'README.md'
+      - 'thanos-s3-configuration.yaml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  release:
+    name: Release
+    uses:
+      emergn-infinity/pipelines/.github/workflows/github-release.yaml@main
+    secrets: inherit
+...

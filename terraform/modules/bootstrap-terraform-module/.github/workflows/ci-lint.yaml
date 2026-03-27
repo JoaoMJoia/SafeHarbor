@@ -1,0 +1,23 @@
+---
+name: CI - Lint
+
+on:
+  push:
+    branches:
+      - "main"
+  pull_request:
+
+permissions:
+  contents: read
+  packages: read
+  statuses: write
+
+jobs:
+  lint:
+    if: github.event.action != 'labeled'
+    uses:
+      emergn-infinity/pipelines/.github/workflows/lint_yaml_file.yaml@main
+    with:
+      branch: main
+    secrets: inherit
+...

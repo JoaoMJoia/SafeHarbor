@@ -1,0 +1,22 @@
+---
+name: 'CI - Terraform compatibilities check'
+
+on:
+  pull_request:
+    paths:
+      - '**.tf'
+      - '.github/workflows/ci-terraform-compatibilities.yml'
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: write
+  pull-requests: write
+
+jobs:
+  check-compatibilities:
+    name: 'Check compatibilities'
+    uses:
+      emergn-infinity/pipelines/.github/workflows/terraform-module-compatibilities.yaml@main
+    secrets: inherit
+...

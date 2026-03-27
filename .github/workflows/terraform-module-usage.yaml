@@ -1,0 +1,50 @@
+---
+# This workflow is used to post the Terraform module usage example.
+# snippet example:
+# how-to-use: |        
+#         # Example how to use GitHub repository module
+#         module "{example}" {
+#           source = "git::https://github.com/emergn-infinity/terraform-module-github.git//repository?ref=vX.X.X"
+
+#           key = "{value}"
+#         }
+
+name: 'Terraform Module How to Use'
+on:
+  workflow_call:
+    inputs:
+      how-to-use:
+        description: 'Module usage example'
+        type: string
+        required: true
+
+permissions:
+  id-token: write
+  contents: write
+  pull-requests: write
+
+jobs:
+  how-to-use:
+    name: 'How to Use'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Post Module Usage
+        uses: actions/github-script@v7.0.1
+        with:
+          github-token: ${{ github.token }}
+          script: |
+            const output = `### 📚 Module Usage
+            Here's how to use this module:
+
+            \`\`\`hcl
+            ${{ inputs.how-to-use }}
+            \`\`\`
+            `;
+
+            await github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: output
+            });
+...
