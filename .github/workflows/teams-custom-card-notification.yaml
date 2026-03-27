@@ -1,0 +1,92 @@
+---
+# This workflow is used to send a custom card notification to a Microsoft Teams channel.
+name: MS Teams facts and buttons notification
+
+on:
+  workflow_call:
+    inputs:
+      ms-teams-webhook-uri:
+        required: false
+        type: string
+      show-on-start:
+        required: false
+        type: boolean
+        default: false
+      show-on-exit:
+        required: false
+        type: boolean
+        default: false
+      card-layout-start:
+        required: false
+        type: string
+        default: complete
+      card-layout-exit:
+        required: false
+        type: string
+        default: complete
+      environment:
+        required: false
+        type: string
+        default: ""
+      custom-facts:
+        required: false
+        type: string
+        default: ""
+        # This is an example of how to use the custom-facts input
+        # default: |
+        #   - name: Key example
+        #     value: "Value example"
+      custom-actions:
+        required: false
+        type: string
+        default: ""
+        # This is an example of how to use the custom-actions input
+        # default: |
+        #   - text: Button URL example
+        #     url: "https://example.com/" 
+      include-files:
+        required: false
+        type: boolean
+        default: false
+      enable-view-status-action:
+        required: false
+        type: boolean
+        default: false
+      enable-review-diffs-action:
+        required: false
+        type: boolean
+        default: false
+      allowed-file-len:
+        required: false
+        type: number
+        default: 7
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  deploy-card-notification:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - name: Run
+        uses: toko-bifrost/ms-teams-deploy-card@3.1.2
+        if: always()
+        with:
+          github-token: ${{ github.token }}
+          webhook-uri: ${{ inputs.ms-teams-webhook-uri }}
+          show-on-start: ${{ inputs.show-on-start }}
+          card-layout-start: ${{ inputs.card-layout-start }}
+          show-on-exit: ${{ inputs.show-on-exit }}
+          card-layout-exit: ${{ inputs.card-layout-exit }}
+          environment: ${{ inputs.environment }}
+          enable-view-status-action: ${{ inputs.enable-view-status-action }}
+          view-status-action-text: View runned workflow
+          enable-review-diffs-action: ${{ inputs.enable-review-diffs-action }}
+          review-diffs-action-text: Commit diffs
+          custom-facts: ${{ inputs.custom-facts }}
+          custom-actions: ${{ inputs.custom-actions }}
+          include-files: ${{ inputs.include-files }}
+          allowed-file-len: ${{ inputs.allowed-file-len }} 
+...

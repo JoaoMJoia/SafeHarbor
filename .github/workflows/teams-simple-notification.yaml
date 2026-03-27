@@ -1,0 +1,35 @@
+---
+# This workflow sends a simple custom message notification to a Microsoft Teams channel.
+# It can be called as a reusable workflow (workflow_call) from other workflows.
+# It uses the jdcargile/ms-teams-notification@v1.4 action to send the notification.
+# It requires the following inputs:
+# - ms-teams-webhook-uri: The webhook URI of the Microsoft Teams channel to send the notification to.
+# - notification-summary: The summary of the notification to send.
+name: MS Teams simple custom message notification
+
+on:
+  workflow_call:
+    inputs:
+      ms-teams-webhook-uri:
+        required: false
+        type: string
+      notification-summary:
+        required: true
+        type: string
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  ms-teams-notification:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - name: Notify dedicated teams channel
+        uses: jdcargile/ms-teams-notification@v1.4
+        with:
+          github-token: ${{ github.token }}
+          ms-teams-webhook-uri: ${{ inputs.ms-teams-webhook-uri }}
+          notification-summary: ${{ inputs.notification-summary }}
+...

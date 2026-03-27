@@ -1,4 +1,7 @@
 ---
+# This workflow is used to check the pull request title format.
+# Using conventional commits message format.
+# TICKET_APPLICATION is the project code of the ticket.
 name: CI - Pull request title format check
 
 on:
@@ -18,7 +21,7 @@ jobs:
       - uses: amannn/action-semantic-pull-request@v5
         with:
           scopes: |
-            JIRA-[0-9]+
+            TICKET_APPLICATION-[0-9]+
             deps
             deps-dev
             changelog

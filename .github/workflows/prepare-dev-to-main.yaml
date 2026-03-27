@@ -1,4 +1,5 @@
 ---
+# This workflow is used to prepare the dev branch to be merged into the main branch.
 name: Prepare Dev to Main
 
 on:

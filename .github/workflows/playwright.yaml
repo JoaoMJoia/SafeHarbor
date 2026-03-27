@@ -1,0 +1,149 @@
+---
+# This workflow is used to run Playwright tests.
+name: QA Team - Playwright Tests
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        required: true
+        type: choice
+        options:
+          - qa
+        description: "Environment to run tests against (qa, staging, etc)"
+        default: qa
+      test_directory:
+        required: true
+        type: choice
+        options:
+          - E2E/tests/smoke-tests
+          - E2E/tests/feature-tests
+        description: "Directory containing tests to run"
+        default: E2E/tests/smoke-tests
+
+permissions:
+  id-token: write
+  contents: read
+  actions: read
+
+env:
+  AWS_REGION: ${{ vars.AWS_REGION }}
+  ROLE-TO-ASSUME: arn:aws:iam::${{ secrets.AWS_ORG_ACCOUNT }}:role/github-example
+  PLAYWRIGHT_S3_BUCKET_NAME: ${{ vars.PLAYWRIGHT_S3_BUCKET_NAME }}
+  QA_DB_USER: ${{ vars.DB_USER }}
+  QA_DB_PASS: ${{ secrets.DB_PASS }}
+  STRIPE_PUBLISHABLE_KEY: ${{ vars.STRIPE_PUBLISHABLE_KEY }}
+  STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
+  TEST_ENV: ${{ github.event.inputs.environment }}
+  TEST_DIRECTORY: ${{ github.event.inputs.test_directory }}
+
+jobs:
+  playwright-starting-notification:
+    uses: emergn-infinity/pipelines/.github/workflows/ms_teams_notify.yaml@main
+    with:
+      notification-summary: "${{ github.event.inputs.test_directory == 'E2E/tests/smoke-tests' && 'Smoke Tests' || 'Feature Tests' }} starting on ${{ github.event.inputs.environment }} environment."
+      ms-teams-webhook-uri: ${{ vars.MS_TEAMS_CHANNEL_PLAYWRIGHT }}
+    secrets: inherit
+  playwright_test_run:
+    name: "Run ${{ github.event.inputs.test_directory == 'E2E/tests/smoke-tests' && 'Smoke Tests' || 'Feature Tests' }} on ${{ github.event.inputs.environment }}"
+    environment: ${{ github.event.inputs.environment }}      
+    outputs:
+      url: ${{ steps.website-url.outputs.url }}
+      test_type: ${{ github.event.inputs.test_directory == 'E2E/tests/smoke-tests' && 'Smoke Tests' || 'Feature Tests' }}
+      test_directory_path: ${{ steps.test-dir-path.outputs.value }}
+      target_environment: ${{ env.TEST_ENV }}
+    runs-on:
+      # Organization runner with MongoDB Atlas access 
+      labels: ubuntu-22.04-4core # actionlint-disable-line runner-label
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Login to AWS
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ env.ROLE-TO-ASSUME }}
+          aws-region: ${{ env.AWS_REGION }}
+      - name: Setting up node version using .nvmrc file
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+      - name: Install dependencies
+        run: npm ci
+      - name: Install Playwright Browsers
+        run: npx playwright install --with-deps
+      - name: Run Playwright tests
+        run: xvfb-run --auto-servernum --server-args="-screen 0 1920x1080x24" npx playwright test "${{ env.TEST_DIRECTORY }}" --project ${{ env.TEST_ENV }} --reporter=html
+        continue-on-error: true
+      - name: Upload playwright-report as artifact
+        uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() }}
+        with:
+          name: ${{ env.TEST_DIRECTORY == 'E2E/tests/smoke-tests' && 'smoke-tests-report' || 'feature-tests-report' }}
+          path: playwright-report/
+          retention-days: 10
+      - name: Normalize test directory path
+        if: ${{ !cancelled() }}
+        id: test-dir-path
+        run: |
+          echo "value=$(echo "${{ env.TEST_DIRECTORY }}" | sed 's/\//-/g')" >> "$GITHUB_OUTPUT"
+      - name: Upload to S3
+        if: ${{ !cancelled() }}
+        run: |
+          aws s3 sync playwright-report/ s3://${{ env.PLAYWRIGHT_S3_BUCKET_NAME }}/${{ steps.test-dir-path.outputs.value }}/ --delete
+      - name: Configure S3 for static website hosting
+        if: ${{ !cancelled() }}
+        run: |
+          # Create an index.html that links to both test reports
+          echo '<!DOCTYPE html>
+          <html>
+          <head>
+            <title>Playwright Test Reports</title>
+            <style>
+              body { font-family: Arial, sans-serif; margin: 40px; }
+              h1 { color: #333; }
+              .report-list { list-style: none; padding: 0; }
+              .report-list li { margin: 10px 0; }
+              .report-list a {
+                text-decoration: none;
+                color: #0066cc;
+                padding: 10px;
+                border: 1px solid #ddd;
+                border-radius: 4px;
+                display: inline-block;
+              }
+              .report-list a:hover { background-color: #f0f0f0; }
+            </style>
+          </head>
+          <body>
+          <h1>Playwright Test Reports</h1>
+          <ul class="report-list">
+          <li><a href="/E2E-tests-smoke-tests/">Smoke Tests Report</a></li>
+          <li><a href="/E2E-tests-feature-tests/">Feature Tests Report</a></li>
+          </ul>
+          </body>
+          </html>' > index.html
+          
+          aws s3 cp index.html s3://${{ env.PLAYWRIGHT_S3_BUCKET_NAME }}/index.html
+          aws s3 website s3://${{ env.PLAYWRIGHT_S3_BUCKET_NAME }}/ --index-document index.html
+      - name: Output website URL
+        if: ${{ !cancelled() }}
+        id: website-url
+        run: |
+          URL="http://${{ env.PLAYWRIGHT_S3_BUCKET_NAME }}.s3-website-${{ env.AWS_REGION }}.amazonaws.com"
+          echo "url=$URL" >> $GITHUB_OUTPUT
+          echo "Site is available at $URL"
+  ms-teams-notification:
+    needs: playwright_test_run
+    uses:
+      emergn-infinity/pipelines/.github/workflows/ms-teams-deploy-card.yaml@main
+    with:
+      ms-teams-webhook-uri: ${{ vars.MS_TEAMS_CHANNEL_PLAYWRIGHT }}
+      show-on-exit: true
+      environment: ${{ needs.playwright_test_run.outputs.target_environment }}
+      custom-actions: |
+        - text: "${{ needs.playwright_test_run.outputs.test_type }} Report"
+          url: ${{ needs.playwright_test_run.outputs.url }}/${{ needs.playwright_test_run.outputs.test_directory_path }}/
+    secrets: inherit
+...

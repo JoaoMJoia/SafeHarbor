@@ -1,0 +1,103 @@
+---
+# This workflow is used to run the CD pipeline for the Terraform infrastructure on label.
+name: 'Terraform CD on label'
+on:
+  workflow_call:
+    inputs:
+      terraform-folder:
+        description: 'The folder name of the terraform code'
+        required: true
+        type: string
+      label-to-apply:
+        description: 'The label to apply the terraform code'
+        required: true
+        type: string
+      tf-version:
+        description: 'The Terraform version to use'
+        required: false
+        type: string
+        default: '1.9.7'
+
+permissions:
+  id-token: write
+  contents: write
+  pull-requests: write
+
+env:
+  TF_VERSION: ${{ inputs.tf-version }}
+  ENV_FOLDER: ${{ inputs.terraform-folder }}
+  AWS_REGION: ${{ vars.AWS_REGION }}
+  ROLE-TO-ASSUME: arn:aws:iam::${{ secrets.AWS_ORG_ACCOUNT }}:role/github-example
+  INFRACOST_API_KEY: ${{ secrets.INFRACOST_API_KEY }}
+
+jobs:
+  apply:
+    if: github.event.label.name == inputs.label-to-apply
+    name: 'Apply ${{ inputs.terraform-folder }}'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash
+        working-directory: ${{ env.ENV_FOLDER }}
+    env:
+      GITHUB_TOKEN: ${{ secrets.TF_MANAGE_GITHUB_TOKEN }}
+    steps:
+      - name: Checkout repository code
+        uses: actions/checkout@v6
+      - name: Configure Git credentials for private module access
+        run: |
+          git config --global url."https://x-access-token:${{ env.GITHUB_TOKEN }}@github.com/".insteadOf "https://github.com/"
+      - name: List directory
+        run: |
+          ls -lhatr
+      - name: Login to AWS
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ env.ROLE-TO-ASSUME }}
+          aws-region: ${{ env.AWS_REGION }}
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+      - name: Terraform Init
+        id: init
+        run: |
+          terraform init -upgrade -no-color
+      - name: Terraform Apply
+        id: apply
+        run: |
+          terraform apply -auto-approve -no-color
+      - name: Comment jobs info on PR
+        uses: actions/github-script@v7.0.1
+        env:
+          TFAPPLY: "terraform\n${{ steps.apply.outputs.stdout }}"
+        with:
+          github-token: ${{ github.token }}
+          script: |
+            const output = `*Pusher: @${{ github.actor }}, Action: \`${{ github.event_name }}\`, Working Directory: \`${{ env.ENV_FOLDER }}\`, Workflow: \`${{ github.workflow }}\`*
+            
+            #### Terraform Initialization ⚙️\`${{ steps.init.outcome }}\`
+
+            ####  📖 ❗️ APPLY ❗️
+
+            <details><summary>Show</summary>
+
+            \`\`\`\n
+            ${process.env.TFAPPLY}
+            \`\`\`
+
+            </details>
+  
+            `;
+
+            await github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: output
+            });
+      - name: Terraform Output
+        id: output
+        run: |
+          terraform output
+...

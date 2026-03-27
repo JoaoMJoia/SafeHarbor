@@ -1,0 +1,190 @@
+---
+# This workflow is used to scan the ECR image for vulnerabilities and store the reports in an S3 bucket.
+name: Trivy vulnerability scan - ECR image
+
+on:
+  workflow_dispatch:
+    inputs:
+      trivy_s3_bucket:
+        required: true
+        type: string
+        description: "S3 bucket name where Trivy reports will be stored"
+        default: "safeharbor-trivy-reports-dev"
+      environment:
+        required: true
+        type: string
+        description: "Environment name (e.g., dev, staging, prod)"
+        default: "dev"
+      ms_teams_webhook_uri:
+        required: true
+        type: string
+        description: "Microsoft Teams webhook URI"
+        default: "https://outlook.office.com/webhook/example-webhook-uri"
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  AWS_REGION: ${{ vars.AWS_REGION }}
+  ROLE-TO-ASSUME: arn:aws:iam::${{ secrets.AWS_ORG_ACCOUNT }}:role/github-example
+  TRIVY_S3_BUCKET: ${{ github.event.inputs.trivy_s3_bucket }}
+  TARGET_ENVIRONMENT: ${{ github.event.inputs.environment }}
+  MS_TEAMS_WEBHOOK_URI: ${{ github.event.inputs.ms_teams_webhook_uri }}
+
+jobs:
+  trivy:
+    name: Trivy Scan
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+      - name: Set URL
+        run: |
+          echo "REPORT_URL=http://${{ env.TRIVY_S3_BUCKET }}.s3-website-${{ env.AWS_REGION }}.amazonaws.com" >> $GITHUB_ENV
+      - name: Notify teams channel
+        uses: toko-bifrost/ms-teams-deploy-card@3.1.2
+        if: always()
+        with:
+          github-token: ${{ github.token }}
+          webhook-uri: ${{ env.MS_TEAMS_WEBHOOK_URI }}
+          show-on-start: false
+          show-on-exit: true
+          card-layout-exit: complete
+          enable-view-status-action: true
+          view-status-action-text: View runned workflow
+          enable-review-diffs-action: false
+          custom-facts: |
+            - name: Title
+              value: "Trivy ECR image scan"
+            - name: Workload
+              value: "${{ github.event.repository.name }}"
+            - name: Environment
+              value: "${{ env.TARGET_ENVIRONMENT }}"
+          custom-actions: |
+            - text: "Trivy Report"
+              url: "${{ env.REPORT_URL }}"
+          include-files: false
+          allowed-file-len: 0
+      - name: AWS - Login
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ env.ROLE-TO-ASSUME }}
+          aws-region: ${{ env.AWS_REGION }}
+      - name: AWS - Login ECR
+        uses: aws-actions/amazon-ecr-login@v2
+        id: ecr
+      - name: AWS - ${{ github.event.repository.name }}/${{ env.TARGET_ENVIRONMENT }} - Get latest ECR image tag 
+        run: |
+          echo "tag=$(aws ecr describe-images --repository-name ${{ github.event.repository.name }}/${{ env.TARGET_ENVIRONMENT }} --query 'sort_by(imageDetails,& imagePushedAt)[-1].imageTags[0]' --output text)" >> "$GITHUB_ENV"
+      - name: Show environment latest ECR image tag for ${{ github.event.repository.name }}/${{ env.TARGET_ENVIRONMENT }}
+        run: |
+          echo ${{ env.tag }}
+      - name: Set timestamp
+        run: |
+          echo "TIMESTAMP=$(date '+%Y-%m-%d %H:%M:%S')" >> $GITHUB_ENV
+          echo "TIMESTAMP_FILENAME=$(date '+%Y%m%d_%H%M%S')" >> $GITHUB_ENV
+      - name: TRIVY - Run vulnerability scanner
+        uses: aquasecurity/trivy-action@0.35.0
+        with:
+          image-ref: '${{ steps.ecr.outputs.registry }}/${{ github.event.repository.name }}/${{ env.TARGET_ENVIRONMENT }}:${{ env.tag }}'
+          output: '${{ github.event.repository.name }}-trivy-report-${{ env.TIMESTAMP_FILENAME }}.sarif'
+          format: 'sarif'
+          ignore-unfixed: true
+          severity: 'HIGH,CRITICAL'
+          scan-type: 'image'
+          timeout: '10m0s'
+          list-all-pkgs: true
+          vuln-type: 'os,library'
+
+      - name: Convert SARIF to HTML
+        run: |
+          # Create HTML report
+          echo "<html><head><title>Trivy Scan Report</title>" > ${{ github.event.repository.name }}-trivy-report-${{ env.TIMESTAMP_FILENAME }}.html
+          echo "<style>
+            body { font-family: Arial, sans-serif; margin: 20px; }
+            h1, h2 { color: #333; }
+            .vuln { margin: 10px 0; padding: 10px; border: 1px solid #ddd; }
+            .critical { border-left: 5px solid #dc3545; }
+            .high { border-left: 5px solid #fd7e14; }
+            .details { margin-left: 20px; }
+            .severity { font-weight: bold; }
+            .critical .severity { color: #dc3545; }
+            .high .severity { color: #fd7e14; }
+          </style></head><body>" >> ${{ github.event.repository.name }}-trivy-report-${{ env.TIMESTAMP_FILENAME }}.html
+          echo "<h1>Security Scan Report for ${{ github.event.repository.name }}/${{ env.TARGET_ENVIRONMENT }}</h1>" >> ${{ github.event.repository.name }}-trivy-report-${{ env.TIMESTAMP_FILENAME }}.html
+          echo "<p>Scan performed at: ${{ env.TIMESTAMP }}</p>" >> ${{ github.event.repository.name }}-trivy-report-${{ env.TIMESTAMP_FILENAME }}.html
+          
+          # Convert SARIF to readable HTML
+          jq -r '.runs[].results[] | 
+            "<div class=\"vuln " + 
+            (if .level == "error" then "critical" else "high" end) + 
+            "\"><h3>" + .message.text + "</h3>" +
+            "<div class=\"details\">" +
+            "<p class=\"severity\">Severity: " + 
+            (if .level == "error" then "CRITICAL" else "HIGH" end) + 
+            "</p>" +
+            "<p>Location: " + (.locations[].physicalLocation.artifactLocation.uri // "N/A") + "</p>" +
+            "<p>More info: <a href=\"" + (.helpUri // "#") + "\">" + (.helpUri // "Not available") + "</a></p>" +
+            "</div></div>"' ${{ github.event.repository.name }}-trivy-report-${{ env.TIMESTAMP_FILENAME }}.sarif >> ${{ github.event.repository.name }}-trivy-report-${{ env.TIMESTAMP_FILENAME }}.html
+          
+          echo "</body></html>" >> ${{ github.event.repository.name }}-trivy-report-${{ env.TIMESTAMP_FILENAME }}.html
+      - name: Create or update index page
+        run: |
+          # Try to download existing index.html
+          aws s3 cp s3://${{ env.TRIVY_S3_BUCKET }}/index.html ./existing-index.html || {
+            # If file doesn't exist, create a new one
+            echo "<html><head><title>Trivy Security Reports</title></head><body>" > existing-index.html
+            echo "<h1>Trivy Security Reports</h1>" >> existing-index.html
+            echo "<ul>" >> existing-index.html
+            echo "</ul></body></html>" >> existing-index.html
+          }
+          
+          # Create new index.html with updated content
+          echo "<html><head><title>Trivy Security Reports</title></head><body>" > index.html
+          echo "<h1>Trivy Security Reports</h1>" >> index.html
+          echo "<ul>" >> index.html
+          
+          # Get unique repository names from existing file and add current one
+          (grep -o 'elp-[^"]*-trivy-report-[0-9]*_[0-9]*' existing-index.html 2>/dev/null || echo "") | sort -u | while read repo; do
+            if [[ "$repo" == *"${{ github.event.repository.name }}"* ]] || [ -z "$repo" ]; then
+              continue
+            fi
+            echo "<li><a href=\"$repo.html\">$(echo $repo | sed 's/-trivy-report-/ - Scanned at /; s/_/ /') Report</a></li>" >> index.html
+          done
+          
+          # Add current repository's link
+          echo "<li><a href=\"${{ github.event.repository.name }}-trivy-report-${{ env.TIMESTAMP_FILENAME }}.html\">${{ github.event.repository.name }} - Scanned at ${{ env.TIMESTAMP }} Report</a></li>" >> index.html
+          
+          echo "</ul></body></html>" >> index.html
+      - name: Clean old reports
+        run: |
+          # Get all reports for the current repository only, sorted by timestamp (newest first)
+          # Skip the 3 most recent ones and delete the rest
+          aws s3api list-objects-v2 --bucket ${{ env.TRIVY_S3_BUCKET }} --output json | \
+          jq -r --arg repo "${{ github.event.repository.name }}" '.Contents[]? | 
+            select(.Key | startswith($repo) and test("-trivy-report-[0-9]{8}_[0-9]{6}\\.html$")) | .Key' | \
+          sort -r | \
+          awk 'NR>3' | \
+          while read -r key; do
+            if [ ! -z "$key" ]; then
+              echo "Deleting old report for ${{ github.event.repository.name }}: $key (keeping 3 most recent)"
+              aws s3 rm "s3://${{ env.TRIVY_S3_BUCKET }}/$key"
+            fi
+          done
+      - name: Upload to S3
+        run: |
+          aws s3 cp ${{ github.event.repository.name }}-trivy-report-${{ env.TIMESTAMP_FILENAME }}.html s3://${{ env.TRIVY_S3_BUCKET }}/
+          aws s3 cp index.html s3://${{ env.TRIVY_S3_BUCKET }}/
+      - name: Configure S3 for static website hosting
+        run: |
+          aws s3 website s3://${{ env.TRIVY_S3_BUCKET }}/ --index-document index.html
+      - name: Output website URL
+        run: echo "Site is available at ${{ env.REPORT_URL }}"
+      - name: Upload trivy-report.html as artifact
+        uses: actions/upload-artifact@v4
+        id: upload
+        with:
+          name: trivy-report
+          path: ${{ github.event.repository.name }}-trivy-report-${{ env.TIMESTAMP_FILENAME }}.html
+...

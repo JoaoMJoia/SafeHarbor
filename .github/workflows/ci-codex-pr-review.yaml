@@ -1,4 +1,6 @@
 ---
+# This workflow is used to review the pull request using Codex.
+# Needs to have a OPENAI_API_KEY secret in the repository.
 name: CI - Codex PR Review
 
 on:
