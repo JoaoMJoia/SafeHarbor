@@ -1,0 +1,633 @@
+---
+# This workflow is used to run the CI/CD pipeline for the AWS infrastructure on merge.
+# To skip deployment, add the `skip-apply` label to the PR.
+name: "Terraform CI/CD AWS on merge"
+
+on:
+  workflow_dispatch:
+  # pull_request:
+  #   paths:
+  #     - 'aws/**'
+  #     - 'sops_secrets/dev/backend.enc.json'
+  # push:
+  #   branches:
+  #     - main
+  #   paths:
+  #     - 'aws/**'
+  #     - 'sops_secrets/**'
+
+permissions:
+  id-token: write
+  contents: write
+  issues: write
+  pull-requests: write
+
+env:
+  AWS_REGION: ${{ vars.AWS_REGION }}
+  ROLE_TO_ASSUME: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/github-actions-terraform
+  TF_VERSION: 1.14.5
+  INFRACOST_API_KEY: ${{ secrets.INFRACOST_API_KEY }}
+  GITHUB_TOKEN: ${{ github.token }}
+
+jobs:
+  terraform-lint:
+    if: github.event_name == 'pull_request'
+    name: Terraform Lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: List actionlint.yml
+        run: |
+          ls -lhtar .github/linters/.yaml-lint.yml
+      - name: Super Linter Run
+        uses: super-linter/super-linter/slim@v8
+        env:
+          VALIDATE_ALL_CODEBASE: false
+          LINTER_RULES_PATH: .github/linters
+          LOG_LEVEL: INFO
+          GITHUB_TOKEN: ${{ github.token }}
+          # YAML
+          VALIDATE_YAML: true
+          YAML_CONFIG_FILE: .yaml-lint.yml
+          YAML_ERROR_ON_WARNING: false
+          # JSON
+          VALIDATE_JSON: true
+          # Terraform format
+          VALIDATE_TERRAFORM_FMT: true
+          # Terraform lint
+          VALIDATE_TERRAFORM_TFLINT: true
+          # Shell
+          VALIDATE_SHELL_SHFMT: true
+          # Bash
+          VALIDATE_BASH: true
+          # Checkov
+          VALIDATE_CHECKOV: true
+          CHECKOV_FILE_NAME: .checkov.yaml
+
+  detect-changed-folders:
+    if: github.event_name == 'pull_request'
+    name: Detect changed Terraform folders
+    runs-on: ubuntu-latest
+    outputs:
+      folders: ${{ steps.detect.outputs.folders }}
+      folders_json: ${{ steps.detect.outputs.folders_json }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+      
+      - name: Detect folders
+        id: detect
+        run: |
+          # Determine base and head commits
+          if [ "${{ github.event_name }}" == "pull_request" ]; then
+            BASE_SHA="${{ github.event.pull_request.base.sha }}"
+            HEAD_SHA="${{ github.event.pull_request.head.sha }}"
+          else
+            BASE_SHA="${{ github.event.before }}"
+            HEAD_SHA="${{ github.event.after }}"
+          fi
+          
+          # Get all changed files in aws/ and sops_secrets/ (sops secrets map to backend stacks)
+          CHANGED_FILES=$(git diff --name-only $BASE_SHA $HEAD_SHA | grep '^aws/' || true)
+          SOPS_CHANGED_FILES=$(git diff --name-only $BASE_SHA $HEAD_SHA | grep '^sops_secrets/' || true)
+          
+          if [ -z "$CHANGED_FILES" ] && [ -z "$SOPS_CHANGED_FILES" ]; then
+            echo "folders=" >> $GITHUB_OUTPUT
+            echo "folders_json=[]" >> $GITHUB_OUTPUT
+            echo "No Terraform or SOPS secret files changed"
+            exit 0
+          fi
+          
+          # Find unique deployable folders (folders containing backend.tf); FOLDER_SET avoids duplicates
+          declare -A FOLDER_SET
+          
+          # Map sops_secrets/<env>/backend.enc.json -> aws/<env>/backend (only if that stack exists)
+          while IFS= read -r file; do
+            if [[ "$file" =~ ^sops_secrets/([^/]+)/backend\.enc\.json$ ]]; then
+              ENV="${BASH_REMATCH[1]}"
+              MAPPED_FOLDER="aws/$ENV/backend"
+              if [ -f "$MAPPED_FOLDER/backend.tf" ]; then
+                FOLDER_SET["$MAPPED_FOLDER"]=1
+              fi
+            fi
+          done <<< "$SOPS_CHANGED_FILES"
+          
+          while IFS= read -r file; do
+            # Get directory of changed file
+            DIR=$(dirname "$file")
+
+            # If a frontend module file changed, add all existing env frontend stacks
+            if [[ "$file" == aws/modules/frontend/* ]]; then
+              while IFS= read -r env_frontend; do
+                FOLDER_SET["$env_frontend"]=1
+              done < <(find aws -maxdepth 3 -type f -name 'backend.tf' \
+                       -path 'aws/*/frontend/backend.tf' -print0 | xargs -0 -n1 dirname)
+            fi
+
+            # If a backend module file changed, add all existing env backend stacks
+            if [[ "$file" == aws/modules/backend/* ]]; then
+              while IFS= read -r env_backend; do
+                FOLDER_SET["$env_backend"]=1
+              done < <(find aws -maxdepth 3 -type f -name 'backend.tf' \
+                       -path 'aws/*/backend/backend.tf' -print0 | xargs -0 -n1 dirname)
+            fi
+
+            # If a RDS module file changed, add all existing env RDS stacks
+            if [[ "$file" == aws/modules/rds/* ]]; then
+              while IFS= read -r env_rds; do
+                FOLDER_SET["$env_rds"]=1
+              done < <(find aws -maxdepth 3 -type f -name 'backend.tf' \
+                       -path 'aws/*/rds/backend.tf' -print0 | xargs -0 -n1 dirname)
+            fi
+
+            # Walk up the directory tree to find folder with backend.tf
+            CURRENT_DIR="$DIR"
+            while [ "$CURRENT_DIR" != "aws" ] && [ "$CURRENT_DIR" != "." ]; do
+              if [ -f "$CURRENT_DIR/backend.tf" ]; then
+                # Found a deployable folder
+                FOLDER_SET["$CURRENT_DIR"]=1
+                break
+              fi
+              # Move up one level
+              CURRENT_DIR=$(dirname "$CURRENT_DIR")
+            done
+          done <<< "$CHANGED_FILES"
+          
+          # Convert to sorted array
+          FOLDERS=$(printf '%s\n' "${!FOLDER_SET[@]}" | sort | tr '\n' ',' | sed 's/,$//')
+          
+          # Build JSON array manually for matrix (ensures proper formatting)
+          FOLDERS_JSON="["
+          FIRST=true
+          while IFS= read -r folder; do
+            if [ "$FIRST" = true ]; then
+              FIRST=false
+            else
+              FOLDERS_JSON="$FOLDERS_JSON,"
+            fi
+            FOLDERS_JSON="$FOLDERS_JSON\"$folder\""
+          done < <(printf '%s\n' "${!FOLDER_SET[@]}" | sort)
+          FOLDERS_JSON="$FOLDERS_JSON]"
+          
+          echo "folders=$FOLDERS" >> $GITHUB_OUTPUT
+          echo "folders_json=$FOLDERS_JSON" >> $GITHUB_OUTPUT
+          
+          if [ -n "$FOLDERS" ]; then
+            echo "📦 Deployable folders detected:"
+            printf '%s\n' "${!FOLDER_SET[@]}" | sort | while read folder; do
+              echo "  - $folder"
+            done
+          else
+            echo "⚠️  No deployable folders found (no backend.tf detected)"
+          fi
+
+  plan:
+    if: needs.detect-changed-folders.outputs.folders != ''
+    name: 'Terraform Plan ${{ matrix.folder }}'
+    needs: [detect-changed-folders, terraform-lint]
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        folder: ${{ fromJson(needs.detect-changed-folders.outputs.folders_json) }}
+    defaults:
+      run:
+        working-directory: ${{ matrix.folder }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Configure AWS credentials via OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ env.ROLE_TO_ASSUME }}
+          aws-region: ${{ env.AWS_REGION }}
+      
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+          terraform_wrapper: true
+      
+      - name: Terraform Init
+        id: init
+        run: terraform init -upgrade -no-color
+      
+      - name: Terraform Validate
+        id: validate
+        run: terraform validate -no-color
+      
+      - name: Terraform Plan
+        id: plan
+        run: terraform plan -no-color -input=false -out=plan.tfplan
+        continue-on-error: true
+
+      - name: Post Terraform Summary
+        uses: actions/github-script@v7.0.1
+        with:
+          github-token: ${{ env.GITHUB_TOKEN }}
+          script: |
+            const output = `## 🚀 Infrastructure Changes Summary
+
+            *Pusher: @${{ github.actor }}, Action: \`${{ github.event_name }}\`, Working Directory: \`${{ matrix.folder }}\`, Workflow: \`${{ github.workflow }}\`*
+
+            ### 🔍 Terraform Status
+            - Initialization ⚙️: \`${{ steps.init.outcome }}\`
+            - Validation 🤖: \`${{ steps.validate.outcome }}\`
+            - Plan 📖: \`${{ steps.plan.outcome }}\`
+
+            ### 📖 Terraform Plan
+            ❗️ Please review the changes carefully before approving the PR ❗️
+            _To skip auto-apply on merge, add the \`skip-apply\` label to this PR._
+
+            <details><summary>Show</summary>
+
+            \`\`\`
+            ${{ steps.plan.outputs.stdout }}
+
+            ${{ steps.plan.outputs.stderr }}
+            \`\`\`
+
+            </details>
+            `;
+
+            await github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: output
+            });
+
+  docs:
+    if: needs.detect-changed-folders.outputs.folders != ''
+    name: 'README update'
+    needs: [detect-changed-folders, plan]
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        folder: ${{ fromJson(needs.detect-changed-folders.outputs.folders_json) }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
+      
+      - name: Update README with terraform-docs
+        uses: terraform-docs/gh-actions@v1.0.0
+        with:
+          working-dir: ${{ matrix.folder }}
+          output-file: README.md
+          output-method: inject
+          git-push: "true"
+          git-commit-message: "${{ matrix.folder }}: README.md update automated action"
+
+  infracost:
+    if: needs.detect-changed-folders.outputs.folders != ''
+    name: 'Cloud Infracost'
+    needs: [detect-changed-folders, plan]
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        folder: ${{ fromJson(needs.detect-changed-folders.outputs.folders_json) }}
+    steps:
+      - name: Setup Infracost
+        uses: infracost/actions/setup@v3
+        with:
+          api-key: ${{ env.INFRACOST_API_KEY }}
+
+      - name: Repository base Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.base.ref }}
+      - name: Generate Infracost cost estimate baseline
+        run: |
+          FOLDER_SANITIZED=$(echo "${{ matrix.folder }}" | tr '/' '-')
+          infracost breakdown --path=${{ matrix.folder }} \
+                              --format=json \
+                              --out-file=/tmp/infracost-base-${FOLDER_SANITIZED}.json
+
+      - name: Checkout PR branch
+        uses: actions/checkout@v4
+
+      - name: Generate Infracost diff
+        run: |
+          FOLDER_SANITIZED=$(echo "${{ matrix.folder }}" | tr '/' '-')
+          infracost diff --path=${{ matrix.folder }} \
+                          --format=json \
+                          --compare-to=/tmp/infracost-base-${FOLDER_SANITIZED}.json \
+                          --out-file=/tmp/infracost-${FOLDER_SANITIZED}.json
+
+      - name: Post Infracost comment
+        run: |
+          FOLDER_SANITIZED=$(echo "${{ matrix.folder }}" | tr '/' '-')
+          infracost comment github --path=/tmp/infracost-${FOLDER_SANITIZED}.json \
+                                     --repo=$GITHUB_REPOSITORY \
+                                     --github-token=${{ github.token }} \
+                                     --pull-request=${{ github.event.pull_request.number }} \
+                                     --behavior=hide-and-new
+
+  apply:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    name: 'Terraform Apply'
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+      
+      - name: Find merged PR
+        uses: actions/github-script@v7.0.1
+        id: find-pr
+        with:
+          github-token: ${{ env.GITHUB_TOKEN }}
+          script: |
+            // Find PR that was merged in this push
+            const { data: prs } = await github.rest.pulls.list({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'closed',
+              base: 'main',
+              sort: 'updated',
+              direction: 'desc',
+              per_page: 10
+            });
+            
+            // Find PR that was merged and matches this commit
+            for (const pr of prs) {
+              if (pr.merged_at && pr.merge_commit_sha === context.sha) {
+                core.setOutput('pr_number', pr.number.toString());
+                core.setOutput('base_sha', pr.base.sha);
+                core.setOutput('merge_sha', pr.merge_commit_sha);
+                
+                // Check for skip-apply label
+                const { data: labels } = await github.rest.issues.listLabelsOnIssue({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: pr.number
+                });
+                
+                const hasSkipApplyLabel = labels.some(label => 
+                  label.name.toLowerCase() === 'skip-apply'
+                );
+                
+                if (hasSkipApplyLabel) {
+                  core.setOutput('skip_apply', 'true');
+                  console.log(`Found merged PR #${pr.number} with skip-apply label - apply will be skipped`);
+                } else {
+                  core.setOutput('skip_apply', 'false');
+                  console.log(`Found merged PR #${pr.number}`);
+                }
+                return;
+              }
+            }
+            
+            core.setFailed('No merged PR found for this commit');
+
+      - name: Detect changed folders
+        if: steps.find-pr.outcome == 'success' && steps.find-pr.outputs.skip_apply != 'true'
+        id: detect
+        run: |
+          BASE_SHA="${{ steps.find-pr.outputs.base_sha }}"
+          HEAD_SHA="${{ steps.find-pr.outputs.merge_sha }}"
+          
+          # Get all changed files in aws/ and sops_secrets/
+          CHANGED_FILES=$(git diff --name-only $BASE_SHA $HEAD_SHA | grep '^aws/' || true)
+          SOPS_CHANGED_FILES=$(git diff --name-only $BASE_SHA $HEAD_SHA | grep '^sops_secrets/' || true)
+          
+          if [ -z "$CHANGED_FILES" ] && [ -z "$SOPS_CHANGED_FILES" ]; then
+            echo "folders_json=[]" >> $GITHUB_OUTPUT
+            echo "No Terraform or SOPS secret files changed"
+            exit 0
+          fi
+          
+          # Find unique deployable folders (folders containing backend.tf)
+          declare -A FOLDER_SET
+          
+          # Map sops_secrets/<env>/backend.enc.json -> aws/<env>/backend (only if that stack exists)
+          while IFS= read -r file; do
+            if [[ "$file" =~ ^sops_secrets/([^/]+)/backend\.enc\.json$ ]]; then
+              ENV="${BASH_REMATCH[1]}"
+              MAPPED_FOLDER="aws/$ENV/backend"
+              if [ -f "$MAPPED_FOLDER/backend.tf" ]; then
+                FOLDER_SET["$MAPPED_FOLDER"]=1
+              fi
+            fi
+          done <<< "$SOPS_CHANGED_FILES"
+          
+          while IFS= read -r file; do
+            # Get directory of changed file
+            DIR=$(dirname "$file")
+            
+            # Walk up the directory tree to find folder with backend.tf
+            CURRENT_DIR="$DIR"
+            while [ "$CURRENT_DIR" != "aws" ] && [ "$CURRENT_DIR" != "." ]; do
+              if [ -f "$CURRENT_DIR/backend.tf" ]; then
+                # Found a deployable folder
+                FOLDER_SET["$CURRENT_DIR"]=1
+                break
+              fi
+              # Move up one level
+              CURRENT_DIR=$(dirname "$CURRENT_DIR")
+            done
+          done <<< "$CHANGED_FILES"
+          
+          # Build JSON array manually for matrix (ensures proper formatting)
+          FOLDERS_JSON="["
+          FIRST=true
+          while IFS= read -r folder; do
+            if [ "$FIRST" = true ]; then
+              FIRST=false
+            else
+              FOLDERS_JSON="$FOLDERS_JSON,"
+            fi
+            FOLDERS_JSON="$FOLDERS_JSON\"$folder\""
+          done < <(printf '%s\n' "${!FOLDER_SET[@]}" | sort)
+          FOLDERS_JSON="$FOLDERS_JSON]"
+          
+          echo "folders_json=$FOLDERS_JSON" >> $GITHUB_OUTPUT
+          
+          if [ -n "$FOLDERS_JSON" ] && [ "$FOLDERS_JSON" != "[]" ]; then
+            echo "📦 Deployable folders detected:"
+            printf '%s\n' "${!FOLDER_SET[@]}" | sort | while read folder; do
+              echo "  - $folder"
+            done
+          else
+            echo "⚠️  No deployable folders found (no backend.tf detected)"
+          fi
+
+      - name: Configure AWS credentials via OIDC
+        if: steps.find-pr.outcome == 'success' && steps.detect.outputs.folders_json != '[]' && steps.find-pr.outputs.skip_apply != 'true'
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ env.ROLE_TO_ASSUME }}
+          aws-region: ${{ env.AWS_REGION }}
+      
+      - name: Setup Terraform
+        if: steps.find-pr.outcome == 'success' && steps.detect.outputs.folders_json != '[]' && steps.find-pr.outputs.skip_apply != 'true'
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+          terraform_wrapper: true
+
+      - name: Apply Terraform for each folder
+        if: steps.find-pr.outcome == 'success' && steps.detect.outputs.folders_json != '[]' && steps.find-pr.outputs.skip_apply != 'true'
+        id: apply
+        env:
+          FOLDERS_JSON: ${{ steps.detect.outputs.folders_json }}
+        run: |
+          # Install jq if not available
+          if ! command -v jq &> /dev/null; then
+            sudo apt-get update && sudo apt-get install -y jq
+          fi
+          
+          # Parse folders from JSON array
+          FOLDERS=$(echo "$FOLDERS_JSON" | jq -r '.[]')
+          
+          if [ -z "$FOLDERS" ]; then
+            echo "No folders to apply"
+            exit 0
+          fi
+          
+          # Create output file for apply summaries
+          APPLY_OUTPUT_FILE="/tmp/terraform-apply-summary.txt"
+          echo "" > "$APPLY_OUTPUT_FILE"
+          
+          # Loop through each folder and apply
+          while IFS= read -r folder; do
+            if [ -z "$folder" ]; then
+              continue
+            fi
+            
+            echo "=========================================="
+            echo "Applying Terraform for: $folder"
+            echo "=========================================="
+            
+            cd "$folder" || exit 1
+            
+            # Initialize Terraform
+            echo "Initializing Terraform..."
+            terraform init -upgrade -no-color
+            
+            # Apply directly (no saved plan needed) and capture output
+            echo "Applying Terraform changes..."
+            
+            # Create temporary file for this folder's apply output (sanitize folder name)
+            FOLDER_SANITIZED=$(echo "$folder" | tr '/' '-')
+            TEMP_APPLY_OUTPUT="/tmp/terraform-apply-${FOLDER_SANITIZED}.txt"
+            
+            # Write header to summary file
+            {
+              echo "## Folder: $folder"
+              echo ""
+              echo '```'
+            } >> "$APPLY_OUTPUT_FILE"
+            
+            # Run terraform apply and capture all output (unbuffered)
+            terraform apply -auto-approve -no-color 2>&1 | tee "$TEMP_APPLY_OUTPUT"
+            APPLY_EXIT_CODE=${PIPESTATUS[0]}
+            
+            # Append the captured output to summary file
+            cat "$TEMP_APPLY_OUTPUT" >> "$APPLY_OUTPUT_FILE"
+            
+            # Append footer to summary file
+            {
+              echo '```'
+              echo ""
+              if [ $APPLY_EXIT_CODE -eq 0 ]; then
+                echo "✅ **Status:** Success"
+              else
+                echo "❌ **Status:** Failed (exit code: $APPLY_EXIT_CODE)"
+              fi
+              echo ""
+              echo "---"
+              echo ""
+            } >> "$APPLY_OUTPUT_FILE"
+            
+            # Clean up temp file
+            rm -f "$TEMP_APPLY_OUTPUT"
+            
+            cd - || exit 1
+            
+            echo "Completed applying for: $folder"
+            echo ""
+          done <<< "$FOLDERS"
+          
+      
+      - name: Skip Apply Notification
+        if: steps.find-pr.outcome == 'success' && steps.find-pr.outputs.skip_apply == 'true'
+        uses: actions/github-script@v7.0.1
+        with:
+          github-token: ${{ env.GITHUB_TOKEN }}
+          script: |
+            const prNumber = ${{ steps.find-pr.outputs.pr_number }};
+            
+            const output = `## ⏭️ Terraform Apply Skipped
+
+            *Skipped by: @${{ github.actor }}, Action: \`${{ github.event_name }}\`, Workflow: \`${{ github.workflow }}\`, Commit: \`${{ github.sha }}\`*
+
+            ### ℹ️ Status
+            Terraform apply was skipped because the PR has the \`skip-apply\` label.
+
+            This is intentional - no infrastructure changes were applied.
+            `;
+
+            await github.rest.issues.createComment({
+              issue_number: prNumber,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: output
+            });
+
+      - name: Post Terraform Apply Summary
+        if: steps.find-pr.outcome == 'success' && steps.apply.outcome == 'success' && steps.detect.outputs.folders_json != '[]' && steps.find-pr.outputs.skip_apply != 'true'
+        uses: actions/github-script@v7.0.1
+        with:
+          github-token: ${{ env.GITHUB_TOKEN }}
+          script: |
+            const fs = require('fs');
+            const prNumber = ${{ steps.find-pr.outputs.pr_number }};
+            
+            // Read the apply summary from file
+            let applySummary = '';
+            try {
+              const applyOutputFile = '/tmp/terraform-apply-summary.txt';
+              if (fs.existsSync(applyOutputFile)) {
+                applySummary = fs.readFileSync(applyOutputFile, 'utf8');
+              } else {
+                applySummary = '⚠️ No apply summary available';
+              }
+            } catch (error) {
+              applySummary = `⚠️ Error reading apply summary: ${error.message}`;
+            }
+            
+            const output = `## ✅ Terraform Apply Summary
+
+            *Applied by: @${{ github.actor }}, Action: \`${{ github.event_name }}\`, Workflow: \`${{ github.workflow }}\`, Commit: \`${{ github.sha }}\`*
+
+            ### 🔍 Terraform Status
+            - Apply 🚀: \`${{ steps.apply.outcome }}\`
+
+            ### Terraform Apply Results
+
+            <details><summary>Show</summary>
+
+            ${applySummary}
+
+            </details>
+            `;
+
+            await github.rest.issues.createComment({
+              issue_number: prNumber,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: output
+            });
+...

@@ -1,0 +1,259 @@
+{
+  "family": "___APPLICATION_NAME___-ecs-webserver-task",
+  "containerDefinitions": [
+      {
+          "name": "backend-app",
+          "image": "",
+          "cpu": 512,
+          "memory": 1024,
+          "portMappings": [
+              {
+                  "name": "backend-app-80-tcp",
+                  "containerPort": 80,
+                  "hostPort": 80,
+                  "protocol": "tcp"
+              }
+          ],
+          "essential": true,
+          "environment": [
+              {
+                  "name": "APP_DEBUG",
+                  "value": "false"
+              },
+              {
+                  "name": "APP_ENV",
+                  "value": "production"
+              },
+              {
+                  "name": "APP_FALLBACK_LOCALE",
+                  "value": "en"
+              },
+              {
+                  "name": "APP_LOCALE",
+                  "value": "en"
+              },
+              {
+                  "name": "APP_MAINTENANCE_DRIVER",
+                  "value": "file"
+              },
+              {
+                  "name": "APP_MAINTENANCE_STORE",
+                  "value": "database"
+              },
+              {
+                  "name": "APP_NAME",
+                  "value": "ExampleApp"
+              },
+              {
+                  "name": "APP_TIMEZONE",
+                  "value": "UTC"
+              },
+              {
+                  "name": "APP_URL",
+                  "value": "___APP_URL___"
+              },
+              {
+                  "name": "AWS_BUCKET",
+                  "value": "___APPLICATION_NAME___-assets"
+              },
+              {
+                  "name": "AWS_DEFAULT_REGION",
+                  "value": "___AWS_REGION___"
+              },
+              {
+                  "name": "AWS_USE_PATH_STYLE_ENDPOINT",
+                  "value": "false"
+              },
+              {
+                  "name": "BCRYPT_ROUNDS",
+                  "value": "12"
+              },
+              {
+                  "name": "BROADCAST_CONNECTION",
+                  "value": "log"
+              },
+              {
+                  "name": "CACHE_PREFIX",
+                  "value": ""
+              },
+              {
+                  "name": "CACHE_STORE",
+                  "value": "database"
+              },
+              {
+                  "name": "DB_CONNECTION",
+                  "value": "mysql"
+              },
+              {
+                  "name": "DB_PORT",
+                  "value": "3306"
+              },
+              {
+                  "name": "DB_USERNAME",
+                  "value": "root"
+              },
+              {
+                  "name": "FILESYSTEM_DISK",
+                  "value": "s3"
+              },
+              {
+                  "name": "LOG_CHANNEL",
+                  "value": "stderr"
+              },
+              {
+                  "name": "LOG_DEPRECATIONS_CHANNEL",
+                  "value": "null"
+              },
+              {
+                  "name": "LOG_LEVEL",
+                  "value": "error"
+              },
+              {
+                  "name": "LOG_STACK",
+                  "value": "single"
+              },
+              {
+                  "name": "MAIL_FROM_NAME",
+                  "value": "ExampleApp"
+              },
+              {
+                  "name": "MAIL_MAILER",
+                  "value": "smtp"
+              },
+              {
+                  "name": "MAIL_PORT",
+                  "value": "587"
+              },
+              {
+                  "name": "MAIL_ENCRYPTION",
+                  "value": "tls"
+              },
+              {
+                  "name": "MAIL_FROM_ADDRESS",
+                  "value": "noreply@example.com"
+              },
+              {
+                  "name": "QUEUE_CONNECTION",
+                  "value": "redis"
+              },
+              {
+                  "name": "REDIS_CLIENT",
+                  "value": "phpredis"
+              },
+              {
+                  "name": "REDIS_CLUSTER_ENABLED",
+                  "value": "false"
+              },
+              {
+                  "name": "REDIS_PORT",
+                  "value": "6379"
+              },
+              {
+                  "name": "REDIS_TLS",
+                  "value": "true"
+              },
+              {
+                  "name": "REDIS_TLS_ALLOW_SELF_SIGNED",
+                  "value": "true"
+              },
+              {
+                  "name": "REDIS_TLS_VERIFY_PEER",
+                  "value": "false"
+              },
+              {
+                  "name": "REDIS_TLS_VERIFY_PEER_NAME",
+                  "value": "false"
+              },
+              {
+                  "name": "SESSION_DOMAIN",
+                  "value": "null"
+              },
+              {
+                  "name": "SESSION_DRIVER",
+                  "value": "database"
+              },
+              {
+                  "name": "SESSION_ENCRYPT",
+                  "value": "false"
+              },
+              {
+                  "name": "SESSION_LIFETIME",
+                  "value": "120"
+              },
+              {
+                  "name": "SESSION_PATH",
+                  "value": "/"
+              }
+          ],
+          "secrets": [
+              {
+                  "name": "APP_KEY",
+                  "valueFrom": "arn:aws:secretsmanager:___AWS_REGION___:___AWS_ACCOUNT_ID___:secret:___APPLICATION_NAME___:APP_KEY::"
+              },
+              {
+                "name": "REDIS_HOST",
+                "valueFrom": "arn:aws:secretsmanager:___AWS_REGION___:___AWS_ACCOUNT_ID___:secret:___APPLICATION_NAME___:REDIS_HOST::"
+              },
+              {
+                "name": "REDIS_PASSWORD",
+                "valueFrom": "arn:aws:secretsmanager:___AWS_REGION___:___AWS_ACCOUNT_ID___:secret:___APPLICATION_NAME___:REDIS_PASSWORD::"
+              },
+              {
+                  "name": "DB_DATABASE",
+                  "valueFrom": "arn:aws:secretsmanager:___AWS_REGION___:___AWS_ACCOUNT_ID___:secret:___APPLICATION_NAME___:DB_DATABASE::"
+              },
+              {
+                  "name": "DB_HOST",
+                  "valueFrom": "arn:aws:secretsmanager:___AWS_REGION___:___AWS_ACCOUNT_ID___:secret:___APPLICATION_NAME___:DB_HOST::"
+              },
+              {
+                "name": "MAIL_PASSWORD",
+                "valueFrom": "arn:aws:secretsmanager:___AWS_REGION___:___AWS_ACCOUNT_ID___:secret:___APPLICATION_NAME___:MAIL_PASSWORD::"
+              },
+              {
+                "name": "MAIL_USERNAME",
+                "valueFrom": "arn:aws:secretsmanager:___AWS_REGION___:___AWS_ACCOUNT_ID___:secret:___APPLICATION_NAME___:MAIL_USERNAME::"
+              },
+              {
+                "name": "MAIL_HOST",
+                "valueFrom": "arn:aws:secretsmanager:___AWS_REGION___:___AWS_ACCOUNT_ID___:secret:___APPLICATION_NAME___:MAIL_HOST::"
+              },
+              {
+                  "name": "DB_PASSWORD",
+                  "valueFrom": "arn:aws:ssm:___AWS_REGION___:___AWS_ACCOUNT_ID___:parameter/___APPLICATION_NAME___/database/password/master"
+              }
+          ],
+          "mountPoints": [],
+          "volumesFrom": [],
+          "logConfiguration": {
+              "logDriver": "awslogs",
+              "options": {
+                  "awslogs-group": "___APPLICATION_NAME___-ecs-webserver-logs",
+                  "awslogs-region": "___AWS_REGION___",
+                  "awslogs-stream-prefix": "___APPLICATION_NAME___-app"
+              }
+          },
+          "healthCheck": {
+              "command": [
+                  "CMD-SHELL",
+                  "curl -f http://localhost/health || exit 1"
+              ],
+              "interval": 30,
+              "timeout": 5,
+              "retries": 3,
+              "startPeriod": 60
+          },
+          "systemControls": []
+      }
+  ],
+  "taskRoleArn": "arn:aws:iam::___AWS_ACCOUNT_ID___:role/___APPLICATION_NAME___-ecs-task-role",
+  "executionRoleArn": "arn:aws:iam::___AWS_ACCOUNT_ID___:role/___APPLICATION_NAME___-ecs-task-execution-role",
+  "networkMode": "awsvpc",
+  "volumes": [],
+  "placementConstraints": [],
+  "requiresCompatibilities": [
+      "FARGATE"
+  ],
+  "cpu": "512",
+  "memory": "1024"
+}

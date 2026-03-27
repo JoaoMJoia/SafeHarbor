@@ -1,0 +1,175 @@
+---
+# This workflow is used to run migrations on the backend in a Fargate environment.
+name: Migrations - Backend Fargate
+
+on:
+  workflow_call:
+    inputs:
+      environment:
+        description: "Environment to run migrations"
+        required: true
+        type: string
+
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Environment to run migrations"
+        required: true
+        default: dev
+        type: choice
+        options:
+          - dev
+
+
+permissions:
+  contents: write
+  id-token: write
+
+env:
+  NOTIFY_CHANNEL: ${{ vars.TEAMS_WEBHOOK_EXAMPLE_URL }}
+  # AWS
+  AWS_REGION: ${{ vars.AWS_REGION }}
+  AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
+  ROLE_TO_ASSUME: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/github-actions-terraform
+  # App
+  APPLICATION_NAME: example
+  APPLICATION_LAYER: backend
+
+jobs:
+  migrations:
+    name: Run migrations
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Send notification - migrations starting
+        uses: jdcargile/ms-teams-notification@v1.4
+        with:
+          github-token: ${{ github.token }}
+          ms-teams-webhook-uri: ${{ env.NOTIFY_CHANNEL }}
+          notification-color: '#FFFF00'
+          notification-summary: "Backend migrations starting for environment '${{ inputs.environment }}'"
+
+      - name: Configure AWS credentials via OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ env.ROLE_TO_ASSUME }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Set current date & time
+        run: |
+          TIMESTAMP=$(date +'%Y-%m-%d-%H-%M-%S')
+          echo "TIMESTAMP=$TIMESTAMP" >> $GITHUB_ENV
+
+      - name: Print timestamp
+        run: |
+          echo "TIMESTAMP: $TIMESTAMP"
+      
+      - name: Take the Snapshot
+        run: |
+          aws rds create-db-snapshot \
+            --db-instance-identifier ${{ env.APPLICATION_NAME }}-${{ inputs.environment }} \
+            --db-snapshot-identifier ${{ env.APPLICATION_NAME }}-${{ inputs.environment }}-migrations-backup-$TIMESTAMP
+
+      - name: Wait for snapshot to be available
+        run: |
+          SNAPSHOT_ID=${{ env.APPLICATION_NAME }}-${{ inputs.environment }}-migrations-backup-$TIMESTAMP
+          STATUS=""
+          while [ "$STATUS" != "available" ]; do
+            echo "Checking snapshot status..."
+            STATUS=$(aws rds describe-db-snapshots \
+              --db-snapshot-identifier "$SNAPSHOT_ID" \
+              --query 'DBSnapshots[0].Status' \
+              --output text)
+            echo "Current status: $STATUS"
+            if [ "$STATUS" = "available" ]; then
+              break
+            fi
+            echo "Waiting 30 seconds for snapshot to complete..."
+            sleep 30
+          done
+
+      - name: Get ECS service networking (subnets & security groups)
+        run: |
+          set -e
+
+          SERVICE_NAME=${{ env.APPLICATION_NAME }}-${{ inputs.environment }}-${{ env.APPLICATION_LAYER }}-ecs-webserver-service
+
+          CLUSTER_NAME=${{ env.APPLICATION_NAME }}-${{ inputs.environment }}-${{ env.APPLICATION_LAYER }}-ecs-cluster
+
+          echo "Describing ECS service: $SERVICE_NAME on cluster $CLUSTER_NAME"
+
+          json=$(aws ecs describe-services \
+            --cluster "$CLUSTER_NAME" \
+            --services "$SERVICE_NAME" \
+            --query 'services[0].networkConfiguration.awsvpcConfiguration' \
+            --output json)
+
+          echo "Raw awsvpcConfiguration:"
+          echo "$json"
+
+          SUBNETS=$(echo "$json" | jq -r '.subnets[]')
+          SGS=$(echo "$json" | jq -r '.securityGroups[]')
+
+          echo "Resolved subnets:"
+          echo "$SUBNETS"
+          echo "Resolved security groups:"
+          echo "$SGS"
+
+          {
+            echo "SUBNET_IDS<<EOF"
+            echo "$SUBNETS"
+            echo "EOF"
+          } >> "$GITHUB_ENV"
+
+          {
+            echo "SECURITY_GROUP_IDS<<EOF"
+            echo "$SGS"
+            echo "EOF"
+          } >> "$GITHUB_ENV"
+
+      - name: Run Laravel maintenance task in ECS
+        id: run-task
+        uses: geekcell/github-action-aws-ecs-run-task@v5.0.1
+        with:
+          cluster: ${{ env.APPLICATION_NAME }}-${{ inputs.environment }}-${{ env.APPLICATION_LAYER }}-ecs-cluster
+          task-definition: ${{ env.APPLICATION_NAME }}-${{ inputs.environment }}-${{ env.APPLICATION_LAYER }}-ecs-webserver-task
+          assign-public-ip: 'DISABLED'
+
+          subnet-ids: ${{ env.SUBNET_IDS }}
+          security-group-ids: ${{ env.SECURITY_GROUP_IDS }}
+
+          tail-logs: true
+          override-container: backend-app
+          override-container-command: |
+            /bin/sh
+            -c
+            php artisan migrate --force --ansi && \
+            php artisan config:cache --ansi && \
+            php artisan route:cache --ansi
+
+          task-wait-until-stopped: true
+          task-start-max-wait-time: 120
+          task-stop-max-wait-time: 300
+
+      - name: Send notification - migrations succeeded
+        if: success()
+        uses: jdcargile/ms-teams-notification@v1.4
+        with:
+          github-token: ${{ github.token }}
+          ms-teams-webhook-uri: ${{ env.NOTIFY_CHANNEL }}
+          notification-color: '#00FF00'
+          notification-summary: "✅ Backend migrations on ${{ inputs.environment }} succeeded."
+
+      - name: Send notification - migrations failed
+        if: failure()
+        uses: jdcargile/ms-teams-notification@v1.4
+        with:
+          github-token: ${{ github.token }}
+          ms-teams-webhook-uri: ${{ env.NOTIFY_CHANNEL }}
+          notification-color: '#FF0000'
+          notification-summary: "❌ Backend migrations on ${{ inputs.environment }} FAILED."
+
+...
